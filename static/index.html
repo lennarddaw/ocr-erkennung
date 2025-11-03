@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bild Upload</title>
+    <title>OCR - Empfänger Erkennung</title>
     <style>
         * {
             margin: 0;
@@ -26,7 +26,7 @@
             border-radius: 10px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
             padding: 30px;
-            max-width: 600px;
+            max-width: 800px;
             width: 100%;
         }
 
@@ -108,9 +108,6 @@
 
         .result-area {
             margin-top: 20px;
-            padding: 15px;
-            background: #f8f9ff;
-            border-radius: 5px;
             display: none;
         }
 
@@ -118,22 +115,70 @@
             display: block;
         }
 
+        .recipient-box {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+
+        .recipient-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+
+        .recipient-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #2e7d32;
+        }
+
+        .ocr-text-box {
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .ocr-text-box h4 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .ocr-text-box pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 12px;
+            color: #555;
+            line-height: 1.5;
+        }
+
         .result-message {
             color: #28a745;
             font-weight: bold;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #d4edda;
+            border-radius: 5px;
         }
 
         .result-message.error {
             color: #dc3545;
+            background: #f8d7da;
         }
 
         .loader {
             border: 3px solid #f3f3f3;
             border-top: 3px solid #667eea;
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
+            width: 40px;
+            height: 40px;
             animation: spin 1s linear infinite;
             margin: 15px auto;
             display: none;
@@ -143,26 +188,65 @@
             display: block;
         }
 
+        .processing-text {
+            text-align: center;
+            color: #666;
+            margin-top: 10px;
+            display: none;
+        }
+
+        .processing-text.active {
+            display: block;
+        }
+
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .stat-item {
+            background: #f8f9ff;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #666;
+            text-transform: uppercase;
+        }
+
+        .stat-value {
+            font-size: 16px;
+            font-weight: bold;
+            color: #333;
+            margin-top: 5px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Bild Upload</h1>
+        <h1>OCR - Empfänger Erkennung</h1>
         
         <div class="upload-area" id="uploadArea">
             <div class="upload-text">
-                Klicken Sie hier oder ziehen Sie ein Bild hierher
+                Klicke hier oder ziehen ein Bild hierher<br>
             </div>
             <input type="file" id="fileInput" accept="image/*">
         </div>
 
-        <button id="uploadBtn" disabled>Bild hochladen</button>
+        <button id="uploadBtn" disabled>OCR durchführen</button>
         
         <div class="loader" id="loader"></div>
+        <div class="processing-text" id="processingText">OCR wird durchgeführt...</div>
 
         <div class="preview-area" id="previewArea">
             <h3>Vorschau:</h3>
@@ -171,7 +255,27 @@
 
         <div class="result-area" id="resultArea">
             <div class="result-message" id="resultMessage"></div>
-            <div id="resultDetails"></div>
+            
+            <div class="recipient-box" id="recipientBox" style="display: none;">
+                <div class="recipient-label">Erkannter Empfaenger:</div>
+                <div class="recipient-value" id="recipientValue"></div>
+            </div>
+
+            <div class="stats" id="stats" style="display: none;">
+                <div class="stat-item">
+                    <div class="stat-label">Bildgröße</div>
+                    <div class="stat-value" id="imageSizeStat">-</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">Textlänge</div>
+                    <div class="stat-value" id="textLengthStat">-</div>
+                </div>
+            </div>
+
+            <div class="ocr-text-box" id="ocrTextBox" style="display: none;">
+                <h4>OCR-Text:</h4>
+                <pre id="ocrText"></pre>
+            </div>
         </div>
     </div>
 
@@ -183,8 +287,15 @@
         const imagePreview = document.getElementById('imagePreview');
         const resultArea = document.getElementById('resultArea');
         const resultMessage = document.getElementById('resultMessage');
-        const resultDetails = document.getElementById('resultDetails');
+        const recipientBox = document.getElementById('recipientBox');
+        const recipientValue = document.getElementById('recipientValue');
+        const ocrTextBox = document.getElementById('ocrTextBox');
+        const ocrText = document.getElementById('ocrText');
         const loader = document.getElementById('loader');
+        const processingText = document.getElementById('processingText');
+        const stats = document.getElementById('stats');
+        const imageSizeStat = document.getElementById('imageSizeStat');
+        const textLengthStat = document.getElementById('textLengthStat');
 
         let selectedFile = null;
         let base64Image = null;
@@ -234,6 +345,7 @@
                 base64Image = e.target.result.split(',')[1];
                 
                 uploadBtn.disabled = false;
+                resultArea.classList.remove('active');
             };
             reader.readAsDataURL(file);
         }
@@ -246,6 +358,7 @@
 
             uploadBtn.disabled = true;
             loader.classList.add('active');
+            processingText.classList.add('active');
             resultArea.classList.remove('active');
 
             try {
@@ -265,22 +378,33 @@
                     resultMessage.textContent = 'Erfolg: ' + data.message;
                     resultMessage.classList.remove('error');
                     
-                    resultDetails.innerHTML = `
-                        <p><strong>Bildgroesse:</strong> ${(data.image_size / 1024).toFixed(2)} KB</p>
-                        <p><strong>Status:</strong> Erfolgreich uebertragen</p>
-                    `;
+                    // Empfänger anzeigen
+                    recipientValue.textContent = data.recipient;
+                    recipientBox.style.display = 'block';
+                    
+                    // Stats anzeigen
+                    imageSizeStat.textContent = (data.image_size / 1024).toFixed(2) + ' KB';
+                    textLengthStat.textContent = data.ocr_text.length + ' Zeichen';
+                    stats.style.display = 'grid';
+                    
+                    // OCR-Text anzeigen
+                    ocrText.textContent = data.ocr_text;
+                    ocrTextBox.style.display = 'block';
                     
                     resultArea.classList.add('active');
                 } else {
-                    throw new Error(data.detail || 'Upload fehlgeschlagen');
+                    throw new Error(data.detail || 'OCR fehlgeschlagen');
                 }
             } catch (error) {
                 resultMessage.textContent = 'Fehler: ' + error.message;
                 resultMessage.classList.add('error');
-                resultDetails.innerHTML = '';
+                recipientBox.style.display = 'none';
+                ocrTextBox.style.display = 'none';
+                stats.style.display = 'none';
                 resultArea.classList.add('active');
             } finally {
                 loader.classList.remove('active');
+                processingText.classList.remove('active');
                 uploadBtn.disabled = false;
             }
         });
