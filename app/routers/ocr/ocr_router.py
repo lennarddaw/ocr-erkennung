@@ -13,6 +13,7 @@ router = APIRouter(
     tags=["ocr"]
 )
 
+#auch mit preprocessing funktioniert es nicht, Name wird aber erkannt
 def preprocess_image(image):
     if len(image.shape) == 3:
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -32,21 +33,24 @@ def preprocess_image(image):
 
 
 def extract_recipient(text: str) -> str:
-    # patterns alleine reicht nicht aus
-    patterns = [
-        r'(?:An|an):\s*(.+?)(?:\n|$)',
-        r'(?:Empfänger|empfänger):\s*(.+?)(?:\n|$)',
-        r'(?:To|to):\s*(.+?)(?:\n|$)',
-        r'(?:Herrn|Frau|Firma)\s+(.+?)(?:\n|$)',
-    ]
-
-    for pattern in patterns:
-        match = re.search(pattern, text, re.MULTILINE)
-        if match:
-            recipient = match.group(1).strip()
-            recipient = re.sub(r'\s+', ' ', recipient)
-            return recipient
+    if not text or not text.strip():
+        return "Kein Text erkannt"
+    
+    for line in text.split('\n'):
+        clean = re.sub(r'[^a-zA-ZäöüßÄÖÜ\s]', ' ', line)
         
+        words = clean.split()
+        
+        for i in range(len(words) - 1):
+            word1 = words[i].strip()
+            word2 = words[i + 1].strip()
+            
+            if (len(word1) >= 3 and len(word2) >= 3 and
+                word1[0].isupper() and word2[0].isupper() and
+                word1.lower() not in ['check', 'amazon', 'music', 'cycle', 'mann', 'erika']):
+                
+                return f"{word1} {word2}"
+    
     return "Keinen Empfänger gefunden"
 
 
@@ -65,7 +69,7 @@ async def upload_image(image_data: ImageBase64):
         custom_config = r'--oem 3 --psm 6'
         ocr_text = pytesseract.image_to_string(
             preprocessed_image, 
-            lang='deu+eng',
+            lang='deu',
             config=custom_config
         )
         
