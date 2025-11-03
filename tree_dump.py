@@ -8,7 +8,7 @@ tree_dump.py — Schreibe die Ordner- und Filestruktur als ASCII-Tree in eine TX
 - Fehler (z. B. PermissionError) werden sauber im Tree vermerkt statt das Skript zu beenden.
 
 Beispiele:
-  python tree_dump.py . -o tree.txt -x cache -x .git -x __pycache__
+  python tree_dump.py . -o tree.txt -x cache -x .git -x .venv
   python tree_dump.py C:\Projekte\MeinRepo -x "node_modules,dist" --max-depth 4
 """
 
