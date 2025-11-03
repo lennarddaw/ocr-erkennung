@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Bild Upload & Anzeige</title>
+    <title>Bild Upload</title>
     <style>
         * {
             margin: 0;
@@ -12,7 +12,7 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: Arial, sans-serif;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
@@ -23,23 +23,23 @@
 
         .container {
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            padding: 40px;
-            max-width: 800px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            max-width: 600px;
             width: 100%;
         }
 
         h1 {
             color: #333;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             text-align: center;
         }
 
         .upload-area {
-            border: 3px dashed #667eea;
-            border-radius: 15px;
-            padding: 40px;
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 30px;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -54,38 +54,31 @@
         .upload-area.dragover {
             border-color: #764ba2;
             background: #e8ebff;
-            transform: scale(1.02);
         }
 
         input[type="file"] {
             display: none;
         }
 
-        .upload-icon {
-            font-size: 48px;
-            margin-bottom: 10px;
-        }
-
         .upload-text {
             color: #666;
-            font-size: 16px;
+            font-size: 14px;
         }
 
         button {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 15px 40px;
-            border-radius: 10px;
-            font-size: 16px;
+            padding: 12px 30px;
+            border-radius: 5px;
+            font-size: 14px;
             cursor: pointer;
-            margin-top: 20px;
+            margin-top: 15px;
             width: 100%;
-            transition: transform 0.2s;
         }
 
         button:hover {
-            transform: translateY(-2px);
+            opacity: 0.9;
         }
 
         button:disabled {
@@ -94,7 +87,7 @@
         }
 
         .preview-area {
-            margin-top: 30px;
+            margin-top: 20px;
             display: none;
         }
 
@@ -102,17 +95,22 @@
             display: block;
         }
 
+        .preview-area h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
         .image-preview {
             max-width: 100%;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
 
         .result-area {
-            margin-top: 30px;
-            padding: 20px;
+            margin-top: 20px;
+            padding: 15px;
             background: #f8f9ff;
-            border-radius: 10px;
+            border-radius: 5px;
             display: none;
         }
 
@@ -131,13 +129,13 @@
         }
 
         .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
+            width: 30px;
+            height: 30px;
             animation: spin 1s linear infinite;
-            margin: 20px auto;
+            margin: 15px auto;
             display: none;
         }
 
@@ -153,10 +151,9 @@
 </head>
 <body>
     <div class="container">
-        <h1>📸 Bild Upload & Anzeige</h1>
+        <h1>Bild Upload</h1>
         
         <div class="upload-area" id="uploadArea">
-            <div class="upload-icon">📁</div>
             <div class="upload-text">
                 Klicken Sie hier oder ziehen Sie ein Bild hierher
             </div>
@@ -192,12 +189,10 @@
         let selectedFile = null;
         let base64Image = null;
 
-        // Click-Handler für Upload-Area
         uploadArea.addEventListener('click', () => {
             fileInput.click();
         });
 
-        // Drag & Drop Handler
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadArea.classList.add('dragover');
@@ -217,29 +212,25 @@
             }
         });
 
-        // File Input Handler
         fileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
                 handleFile(e.target.files[0]);
             }
         });
 
-        // Datei verarbeiten
         function handleFile(file) {
             if (!file.type.startsWith('image/')) {
-                alert('Bitte wählen Sie eine Bilddatei aus!');
+                alert('Bitte waehlen Sie eine Bilddatei aus!');
                 return;
             }
 
             selectedFile = file;
             
-            // Vorschau anzeigen
             const reader = new FileReader();
             reader.onload = (e) => {
                 imagePreview.src = e.target.result;
                 previewArea.classList.add('active');
                 
-                // Base64 ohne Data-URL-Präfix extrahieren
                 base64Image = e.target.result.split(',')[1];
                 
                 uploadBtn.disabled = false;
@@ -247,10 +238,9 @@
             reader.readAsDataURL(file);
         }
 
-        // Upload Button Handler
         uploadBtn.addEventListener('click', async () => {
             if (!base64Image) {
-                alert('Bitte wählen Sie zuerst ein Bild aus!');
+                alert('Bitte waehlen Sie zuerst ein Bild aus!');
                 return;
             }
 
@@ -272,12 +262,12 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    resultMessage.textContent = '✅ ' + data.message;
+                    resultMessage.textContent = 'Erfolg: ' + data.message;
                     resultMessage.classList.remove('error');
                     
                     resultDetails.innerHTML = `
-                        <p><strong>Bildgröße:</strong> ${(data.image_size / 1024).toFixed(2)} KB</p>
-                        <p><strong>Status:</strong> Erfolgreich übertragen</p>
+                        <p><strong>Bildgroesse:</strong> ${(data.image_size / 1024).toFixed(2)} KB</p>
+                        <p><strong>Status:</strong> Erfolgreich uebertragen</p>
                     `;
                     
                     resultArea.classList.add('active');
@@ -285,7 +275,7 @@
                     throw new Error(data.detail || 'Upload fehlgeschlagen');
                 }
             } catch (error) {
-                resultMessage.textContent = '❌ Fehler: ' + error.message;
+                resultMessage.textContent = 'Fehler: ' + error.message;
                 resultMessage.classList.add('error');
                 resultDetails.innerHTML = '';
                 resultArea.classList.add('active');
