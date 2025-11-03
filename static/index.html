@@ -12,8 +12,8 @@
         }
 
         body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f8f9fa;
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -23,37 +23,65 @@
 
         .container {
             background: white;
-            border-radius: 10px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            padding: 30px;
-            max-width: 800px;
+            border-radius: 20px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+            padding: 40px;
+            max-width: 700px;
             width: 100%;
+            transition: all 0.3s ease;
         }
 
         h1 {
-            color: #333;
-            margin-bottom: 20px;
+            color: #1a1a1a;
+            margin-bottom: 30px;
             text-align: center;
+            font-weight: 600;
+            font-size: 24px;
+            letter-spacing: -0.5px;
         }
 
         .upload-area {
-            border: 2px dashed #667eea;
-            border-radius: 8px;
-            padding: 30px;
+            border: 2px dashed #e0e0e0;
+            border-radius: 16px;
+            padding: 50px 30px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s ease;
-            background: #f8f9ff;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            background: #fafafa;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-area::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.05) 0%, rgba(168, 85, 247, 0.05) 100%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .upload-area:hover::before {
+            opacity: 1;
         }
 
         .upload-area:hover {
-            border-color: #764ba2;
-            background: #f0f2ff;
+            border-color: #6366f1;
+            background: #ffffff;
+            transform: translateY(-2px);
         }
 
         .upload-area.dragover {
-            border-color: #764ba2;
-            background: #e8ebff;
+            border-color: #6366f1;
+            background: #f5f3ff;
+            transform: scale(1.02);
+        }
+
+        .upload-area.dragover::before {
+            opacity: 1;
         }
 
         input[type="file"] {
@@ -62,33 +90,47 @@
 
         .upload-text {
             color: #666;
-            font-size: 14px;
+            font-size: 15px;
+            font-weight: 400;
+            position: relative;
+            z-index: 1;
         }
 
         button {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
             color: white;
             border: none;
-            padding: 12px 30px;
-            border-radius: 5px;
-            font-size: 14px;
+            padding: 14px 30px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 500;
             cursor: pointer;
-            margin-top: 15px;
+            margin-top: 20px;
             width: 100%;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
         }
 
         button:hover {
-            opacity: 0.9;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
         }
 
         button:disabled {
             opacity: 0.5;
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
         .preview-area {
-            margin-top: 20px;
+            margin-top: 25px;
             display: none;
+            animation: fadeIn 0.4s ease;
         }
 
         .preview-area.active {
@@ -96,19 +138,22 @@
         }
 
         .preview-area h3 {
-            margin-bottom: 10px;
-            color: #333;
+            margin-bottom: 15px;
+            color: #1a1a1a;
+            font-size: 16px;
+            font-weight: 600;
         }
 
         .image-preview {
             max-width: 100%;
-            border-radius: 5px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
         }
 
         .result-area {
-            margin-top: 20px;
+            margin-top: 25px;
             display: none;
+            animation: fadeIn 0.4s ease;
         }
 
         .result-area.active {
@@ -116,71 +161,103 @@
         }
 
         .recipient-box {
-            background: #e8f5e9;
-            border-left: 4px solid #4caf50;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 15px;
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border-left: 4px solid #10b981;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .recipient-box:hover {
+            transform: translateX(5px);
         }
 
         .recipient-label {
             font-size: 12px;
-            color: #666;
+            color: #059669;
             text-transform: uppercase;
-            margin-bottom: 5px;
+            margin-bottom: 8px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
         }
 
         .recipient-value {
-            font-size: 18px;
-            font-weight: bold;
-            color: #2e7d32;
+            font-size: 20px;
+            font-weight: 600;
+            color: #047857;
+            letter-spacing: -0.3px;
         }
 
         .ocr-text-box {
-            background: #f5f5f5;
-            border: 1px solid #ddd;
-            padding: 15px;
-            border-radius: 5px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 20px;
+            border-radius: 12px;
             max-height: 200px;
             overflow-y: auto;
+            transition: all 0.3s ease;
+        }
+
+        .ocr-text-box::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .ocr-text-box::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .ocr-text-box::-webkit-scrollbar-thumb {
+            background: #cbd5e0;
+            border-radius: 4px;
+        }
+
+        .ocr-text-box::-webkit-scrollbar-thumb:hover {
+            background: #a0aec0;
         }
 
         .ocr-text-box h4 {
-            margin-bottom: 10px;
-            color: #333;
+            margin-bottom: 12px;
+            color: #1a1a1a;
             font-size: 14px;
+            font-weight: 600;
         }
 
         .ocr-text-box pre {
             white-space: pre-wrap;
             word-wrap: break-word;
-            font-size: 12px;
-            color: #555;
-            line-height: 1.5;
+            font-size: 13px;
+            color: #4a5568;
+            line-height: 1.6;
+            font-family: 'SF Mono', Monaco, 'Courier New', monospace;
         }
 
         .result-message {
-            color: #28a745;
-            font-weight: bold;
-            margin-bottom: 15px;
-            padding: 10px;
-            background: #d4edda;
-            border-radius: 5px;
+            color: #047857;
+            font-weight: 500;
+            margin-bottom: 20px;
+            padding: 14px 18px;
+            background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+            border-radius: 12px;
+            border-left: 4px solid #10b981;
+            animation: slideIn 0.4s ease;
         }
 
         .result-message.error {
-            color: #dc3545;
-            background: #f8d7da;
+            color: #dc2626;
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            border-left-color: #ef4444;
         }
 
         .loader {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #667eea;
+            border: 3px solid #f3f4f6;
+            border-top: 3px solid #6366f1;
             border-radius: 50%;
             width: 40px;
             height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 15px auto;
+            animation: spin 0.8s linear infinite;
+            margin: 20px auto;
             display: none;
         }
 
@@ -190,13 +267,16 @@
 
         .processing-text {
             text-align: center;
-            color: #666;
+            color: #6b7280;
             margin-top: 10px;
             display: none;
+            font-size: 14px;
+            font-weight: 500;
         }
 
         .processing-text.active {
             display: block;
+            animation: pulse 2s ease-in-out infinite;
         }
 
         @keyframes spin {
@@ -204,31 +284,86 @@
             100% { transform: rotate(360deg); }
         }
 
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
         .stats {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 15px;
+            gap: 15px;
+            margin-top: 20px;
         }
 
         .stat-item {
-            background: #f8f9ff;
-            padding: 10px;
-            border-radius: 5px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 18px;
+            border-radius: 12px;
             text-align: center;
+            transition: all 0.3s ease;
+            border: 1px solid #e9ecef;
+        }
+
+        .stat-item:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
         }
 
         .stat-label {
             font-size: 11px;
-            color: #666;
+            color: #6b7280;
             text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
         }
 
         .stat-value {
-            font-size: 16px;
-            font-weight: bold;
-            color: #333;
-            margin-top: 5px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-top: 6px;
+            letter-spacing: -0.3px;
+        }
+
+        @media (max-width: 640px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 20px;
+            }
+
+            .upload-area {
+                padding: 40px 20px;
+            }
+
+            .stats {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
@@ -238,7 +373,7 @@
         
         <div class="upload-area" id="uploadArea">
             <div class="upload-text">
-                Klicke hier oder ziehen ein Bild hierher<br>
+                Klicke hier oder ziehe ein Bild hierher<br>
             </div>
             <input type="file" id="fileInput" accept="image/*">
         </div>
@@ -257,7 +392,7 @@
             <div class="result-message" id="resultMessage"></div>
             
             <div class="recipient-box" id="recipientBox" style="display: none;">
-                <div class="recipient-label">Erkannter Empfaenger:</div>
+                <div class="recipient-label">Erkannter Empfänger:</div>
                 <div class="recipient-value" id="recipientValue"></div>
             </div>
 
@@ -331,7 +466,7 @@
 
         function handleFile(file) {
             if (!file.type.startsWith('image/')) {
-                alert('Bitte waehlen Sie eine Bilddatei aus!');
+                alert('Bitte wählen Sie eine Bilddatei aus!');
                 return;
             }
 
@@ -352,7 +487,7 @@
 
         uploadBtn.addEventListener('click', async () => {
             if (!base64Image) {
-                alert('Bitte waehlen Sie zuerst ein Bild aus!');
+                alert('Bitte wählen Sie zuerst ein Bild aus!');
                 return;
             }
 
