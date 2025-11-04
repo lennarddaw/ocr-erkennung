@@ -3,17 +3,20 @@
 │   ├── routers
 │   │   ├── ocr
 │   │   │   ├── __init__.py
+│   │   │   ├── employees.json
+│   │   │   ├── locations.json
 │   │   │   ├── model.py
-│   │   │   └── ocr_router.py
+│   │   │   ├── ocr_router.py
+│   │   │   └── recipients.json
 │   │   ├── .DS_Store
 │   │   └── __init__.py
 │   ├── .DS_Store
-│   ├── __init__.py
 │   ├── main.py
 │   └── requirements.txt
 ├── static
 │   └── index.html
 ├── .DS_Store
+├── .gitignore
 ├── run.py
 ├── tree.txt
 └── tree_dump.py

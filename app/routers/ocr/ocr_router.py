@@ -23,9 +23,9 @@ router = APIRouter(
     tags=["ocr"]
 )
 
-CURRENT_DIR = Path(__file__).parent
-RECIPIENTS_FILE = CURRENT_DIR / "recipients.json"
-LOCATIONS_FILE = CURRENT_DIR / "locations.json"
+DATA_DIR = Path(__file__).parent.parent / "data"
+RECIPIENTS_FILE = DATA_DIR / "recipients.json"
+LOCATIONS_FILE = DATA_DIR / "locations.json"
 
 print("Initialisiere EasyOCR Reader...")
 try:
