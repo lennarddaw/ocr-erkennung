@@ -1,0 +1,29 @@
+{
+  "recipients": [
+    "Sebastian Feldmann",
+    "Friederike Wiegandt",
+    "Jan Schlüter",
+    "Anna Schmidt",
+    "Thomas Weber",
+    "Maria Fischer",
+    "Michael Wagner",
+    "Sarah Becker",
+    "Peter Schulz",
+    "Julia Hoffmann",
+    "Christian Koch",
+    "Michael Schwarz",
+    "Stefan Klein",
+    "Sabine Schröder",
+    "Daniel Neumann",
+    "Lisa Zimmermann",
+    "Martin Braun",
+    "Nicole Hofmann",
+    "Andreas Hartmann",
+    "Katharina Schmitt"
+  ],
+  "settings": {
+    "fuzzy_threshold": 70,
+    "min_word_length": 2,
+    "enable_fallback": true
+  }
+}
