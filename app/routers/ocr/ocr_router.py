@@ -618,7 +618,7 @@ async def upload_image(image_data: ImageBase64):
 
         return {
             "success": True,
-            "message": "Bild erfolgreich verarbeitet (Word-Pool-Matching)",
+            "message": "Bild erfolgreich verarbeitet",
             "processing_time_seconds": processing_time,
             "image_size_bytes": len(img_bytes),
             "image_format": pil_image.format or "Unknown",
