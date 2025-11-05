@@ -15,6 +15,8 @@ from typing import List, Dict, Tuple, Optional, Set
 import easyocr
 import time
 from itertools import combinations
+import httpx
+import hashlib
 
 register_heif_opener()
 
@@ -614,6 +616,34 @@ async def upload_image(image_data: ImageBase64):
         best_ocr_text = ocr_results[0]["text"]
         
         processing_time = round(time.time() - start_time, 2)
+        
+        image_hash = hashlib.md5(image_data.img_body_base64.encode()).hexdigest()[:16]
+         
+        try:
+            async with httpx.AsyncClient() as client:
+                await client.post(
+                    "http://localhost:8000/metrics/log",
+                    json={
+                        "success": recipient_result.get("matched_from_list", False),
+                        "recipient": recipient_result["name"],
+                        "confidence": recipient_result.get("confidence", 0),
+                        "matched_from_list": recipient_result.get("matched_from_list", False),
+                        "method": recipient_result.get("method", "unknown"),
+                        "ocr_strategy": recipient_result.get("ocr_strategy", "unknown"),
+                        "ocr_engine": recipient_result.get("ocr_engine", "unknown"),
+                        "ocr_quality": recipient_result.get("ocr_quality", 0),
+                        "image_quality_score": quality_info["quality_score"],
+                        "processing_time": processing_time,
+                        "image_size": len(img_bytes),
+                        "image_format": pil_image.format or "Unknown",
+                        "image_hash": image_hash,
+                        "word_pool": recipient_result.get("word_pool", [])
+                    },
+                    timeout=5.0
+                )
+        except Exception as log_error:
+            print(f"⚠ Metrics logging failed: {log_error}")
+        
         print(f"✓ Verarbeitung abgeschlossen in {processing_time}s")
 
         return {

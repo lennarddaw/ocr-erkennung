@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from app.routers import ocr
+from app.routers import metrics
 
 app = FastAPI()
 
@@ -15,6 +16,7 @@ app.add_middleware(
 )
 
 app.include_router(ocr.router)
+app.include_router(metrics.router)
 
 @app.get("/")
 async def root():
