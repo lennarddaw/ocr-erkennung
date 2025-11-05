@@ -10,12 +10,12 @@
 │   │   │   └── ocr_router.py
 │   │   └── .DS_Store
 │   ├── .DS_Store
-│   ├── main.py
-│   └── requirements.txt
+│   └── main.py
 ├── static
 │   └── index.html
 ├── .DS_Store
 ├── .gitignore
+├── requirements.txt
 ├── run.py
 ├── tree.txt
 └── tree_dump.py
