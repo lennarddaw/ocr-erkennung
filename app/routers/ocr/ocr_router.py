@@ -14,9 +14,10 @@ from pillow_heif import register_heif_opener
 from typing import List, Dict, Tuple, Optional, Set
 import easyocr
 import time
-from itertools import combinations
-import httpx
 import hashlib
+from itertools import combinations, permutations
+from concurrent.futures import ThreadPoolExecutor
+import Levenshtein
 
 register_heif_opener()
 
@@ -29,13 +30,16 @@ DATA_DIR = Path(__file__).parent.parent / "data"
 RECIPIENTS_FILE = DATA_DIR / "recipients.json"
 LOCATIONS_FILE = DATA_DIR / "locations.json"
 
-print("Initialisiere EasyOCR Reader...")
+print("Initializing EasyOCR...")
 try:
     EASYOCR_READER = easyocr.Reader(['de', 'en'], gpu=False, verbose=False)
-    print("EasyOCR Reader erfolgreich initialisiert")
+    print("EasyOCR initialized")
 except Exception as e:
-    print(f"EasyOCR Fehler: {e}")
+    print(f"EasyOCR error: {e}")
     EASYOCR_READER = None
+
+RECIPIENT_CACHE = {}
+NAME_PARTS_CACHE = {}
 
 
 def load_recipients() -> Tuple[List[str], Dict]:
@@ -44,16 +48,23 @@ def load_recipients() -> Tuple[List[str], Dict]:
             data = json.load(f)
             recipients = data.get("recipients", [])
             settings = data.get("settings", {})
-            print(f"✓ {len(recipients)} Empfänger geladen")
+            
+            global RECIPIENT_CACHE, NAME_PARTS_CACHE
+            RECIPIENT_CACHE = {r.lower(): r for r in recipients}
+            
+            for recipient in recipients:
+                parts = recipient.split()
+                for part in parts:
+                    if len(part) >= 2:
+                        part_lower = part.lower()
+                        if part_lower not in NAME_PARTS_CACHE:
+                            NAME_PARTS_CACHE[part_lower] = []
+                        NAME_PARTS_CACHE[part_lower].append(recipient)
+            
+            print(f"Loaded {len(recipients)} recipients")
             return recipients, settings
-    except FileNotFoundError:
-        print(f"⚠ CRITICAL: {RECIPIENTS_FILE} nicht gefunden!")
-        return [], {}
-    except json.JSONDecodeError as e:
-        print(f"✗ JSON-Fehler in recipients.json: {e}")
-        return [], {}
     except Exception as e:
-        print(f"✗ Fehler beim Laden der Empfänger: {e}")
+        print(f"Error loading recipients: {e}")
         return [], {}
 
 
@@ -64,44 +75,48 @@ def load_locations() -> Tuple[List[str], List[str], Dict]:
             locations = data.get("locations", [])
             keywords = data.get("company_keywords", [])
             settings = data.get("settings", {})
-            print(f"✓ {len(locations)} Standorte und {len(keywords)} Keywords geladen")
+            print(f"Loaded {len(locations)} locations, {len(keywords)} keywords")
             return locations, keywords, settings
-    except FileNotFoundError:
-        print(f"⚠ Warnung: {LOCATIONS_FILE} nicht gefunden - Filter deaktiviert")
-        return [], [], {"filter_enabled": False}
-    except json.JSONDecodeError as e:
-        print(f"✗ JSON-Fehler in locations.json: {e}")
-        return [], [], {"filter_enabled": False}
     except Exception as e:
-        print(f"✗ Fehler beim Laden der Standorte: {e}")
+        print(f"Error loading locations: {e}")
         return [], [], {"filter_enabled": False}
 
 
 KNOWN_RECIPIENTS, RECIPIENT_SETTINGS = load_recipients()
 KNOWN_LOCATIONS, COMPANY_KEYWORDS, LOCATION_SETTINGS = load_locations()
 
-FUZZY_THRESHOLD = RECIPIENT_SETTINGS.get("fuzzy_threshold", 70)
+FUZZY_THRESHOLD = RECIPIENT_SETTINGS.get("fuzzy_threshold", 65)
 MIN_WORD_LENGTH = RECIPIENT_SETTINGS.get("min_word_length", 2)
 ENABLE_FALLBACK = RECIPIENT_SETTINGS.get("enable_fallback", True)
-
 LOCATION_FUZZY_THRESHOLD = LOCATION_SETTINGS.get("location_fuzzy_threshold", 85)
 FILTER_ENABLED = LOCATION_SETTINGS.get("filter_enabled", True)
 CASE_SENSITIVE = LOCATION_SETTINGS.get("case_sensitive", False)
+
+TITLE_PREFIXES = {'dr', 'prof', 'mr', 'mrs', 'ms', 'dr.', 'prof.'}
+EXECUTOR = ThreadPoolExecutor(max_workers=3)
 
 
 def convert_heic_to_rgb(pil_image: Image.Image) -> Image.Image:
     try:
         if pil_image.format in ['HEIF', 'HEIC']:
-            print("ℹ HEIC-Format erkannt, konvertiere zu RGB...")
             pil_image = pil_image.convert('RGB')
-        
         if pil_image.mode != 'RGB':
             pil_image = pil_image.convert('RGB')
-            
         return pil_image
     except Exception as e:
-        print(f"⚠ Warnung bei HEIC-Konvertierung: {e}")
         return pil_image.convert('RGB')
+
+
+def optimize_image_size(pil_image: Image.Image) -> Image.Image:
+    max_dimension = 2000
+    width, height = pil_image.size
+    
+    if width > max_dimension or height > max_dimension:
+        ratio = min(max_dimension / width, max_dimension / height)
+        new_size = (int(width * ratio), int(height * ratio))
+        pil_image = pil_image.resize(new_size, Image.Resampling.LANCZOS)
+    
+    return pil_image
 
 
 def check_image_quality(image: np.ndarray) -> Dict:
@@ -118,19 +133,19 @@ def check_image_quality(image: np.ndarray) -> Dict:
     recommendations = []
     
     if brightness < 50:
-        issues.append("Zu dunkel")
-        recommendations.append("Bild bei besserem Licht aufnehmen")
+        issues.append("Too dark")
+        recommendations.append("Better lighting needed")
     elif brightness > 200:
-        issues.append("Zu hell/überbelichtet")
-        recommendations.append("Belichtung reduzieren")
+        issues.append("Overexposed")
+        recommendations.append("Reduce exposure")
     
     if contrast < 30:
-        issues.append("Geringer Kontrast")
-        recommendations.append("Text deutlicher vom Hintergrund abheben")
+        issues.append("Low contrast")
+        recommendations.append("Increase text/background contrast")
     
     if laplacian_var < 100:
-        issues.append("Unscharf/verschwommen")
-        recommendations.append("Kamera ruhig halten, schärfer fokussieren")
+        issues.append("Blurry")
+        recommendations.append("Focus camera, hold steady")
     
     quality_score = min(100, int(
         (contrast / 100) * 30 +
@@ -138,34 +153,43 @@ def check_image_quality(image: np.ndarray) -> Dict:
         (1 - abs(brightness - 127) / 127) * 20
     ))
     
+    preprocessing_mode = "ultra_aggressive" if quality_score < 40 else "aggressive" if quality_score < 70 else "standard"
+    
     return {
         "brightness": round(float(brightness), 2),
         "contrast": round(float(contrast), 2),
         "sharpness": round(float(laplacian_var), 2),
         "issues": issues,
         "recommendations": recommendations,
-        "quality_score": quality_score
+        "quality_score": quality_score,
+        "preprocessing_mode": preprocessing_mode
     }
 
 
-def enhance_image_pil(pil_image: Image.Image, quality_info: Dict) -> Image.Image:
-    sharpness_factor = 2.5 if quality_info['sharpness'] < 200 else 1.8
+def enhance_image_adaptive(pil_image: Image.Image, quality_info: Dict) -> Image.Image:
+    mode = quality_info.get("preprocessing_mode", "standard")
+    
+    if mode == "ultra_aggressive":
+        sharpness_factor = 3.0
+        contrast_factor = 2.5
+        brightness_adjust = 1.4 if quality_info['brightness'] < 100 else 0.7
+    elif mode == "aggressive":
+        sharpness_factor = 2.5
+        contrast_factor = 2.0
+        brightness_adjust = 1.3 if quality_info['brightness'] < 100 else 0.8
+    else:
+        sharpness_factor = 1.8
+        contrast_factor = 1.5
+        brightness_adjust = 1.1 if quality_info['brightness'] < 100 else 0.9
+    
     enhancer = ImageEnhance.Sharpness(pil_image)
     pil_image = enhancer.enhance(sharpness_factor)
     
-    contrast_factor = 2.0 if quality_info['contrast'] < 50 else 1.5
     enhancer = ImageEnhance.Contrast(pil_image)
     pil_image = enhancer.enhance(contrast_factor)
     
-    if quality_info['brightness'] < 100:
-        brightness_factor = 1.3
-    elif quality_info['brightness'] > 150:
-        brightness_factor = 0.8
-    else:
-        brightness_factor = 1.1
-    
     enhancer = ImageEnhance.Brightness(pil_image)
-    pil_image = enhancer.enhance(brightness_factor)
+    pil_image = enhancer.enhance(brightness_adjust)
     
     return pil_image
 
@@ -177,18 +201,18 @@ def preprocess_ultra_aggressive(image: np.ndarray) -> np.ndarray:
         gray = image
     
     bilateral = cv2.bilateralFilter(gray, 9, 75, 75)
-    denoised = cv2.fastNlMeansDenoising(bilateral, h=20)
-    clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(8, 8))
+    denoised = cv2.fastNlMeansDenoising(bilateral, h=25)
+    clahe = cv2.createCLAHE(clipLimit=5.0, tileGridSize=(8, 8))
     enhanced = clahe.apply(denoised)
     
     binary = cv2.adaptiveThreshold(
         enhanced, 255,
         cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
         cv2.THRESH_BINARY,
-        15, 3
+        17, 4
     )
     
-    scaled = cv2.resize(binary, None, fx=5, fy=5, interpolation=cv2.INTER_CUBIC)
+    scaled = cv2.resize(binary, None, fx=6, fy=6, interpolation=cv2.INTER_CUBIC)
     
     kernel_close = np.ones((3, 3), np.uint8)
     closed = cv2.morphologyEx(scaled, cv2.MORPH_CLOSE, kernel_close)
@@ -208,22 +232,23 @@ def preprocess_aggressive(image: np.ndarray) -> np.ndarray:
     else:
         gray = image
     
-    denoised = cv2.fastNlMeansDenoising(gray, h=15)
-    clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+    denoised = cv2.fastNlMeansDenoising(gray, h=18)
+    clahe = cv2.createCLAHE(clipLimit=3.5, tileGridSize=(8, 8))
     enhanced = clahe.apply(denoised)
     
     binary = cv2.adaptiveThreshold(
         enhanced, 255,
         cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
         cv2.THRESH_BINARY,
-        11, 2
+        13, 3
     )
     
-    scaled = cv2.resize(binary, None, fx=4, fy=4, interpolation=cv2.INTER_CUBIC)
+    scaled = cv2.resize(binary, None, fx=5, fy=5, interpolation=cv2.INTER_CUBIC)
     kernel = np.ones((2, 2), np.uint8)
     cleaned = cv2.morphologyEx(scaled, cv2.MORPH_CLOSE, kernel)
     
     return cleaned
+
 
 def preprocess_standard(image: np.ndarray) -> np.ndarray:
     if len(image.shape) == 3:
@@ -231,16 +256,15 @@ def preprocess_standard(image: np.ndarray) -> np.ndarray:
     else:
         gray = image
     
-    denoised = cv2.fastNlMeansDenoising(gray, h=10)
-    clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+    denoised = cv2.fastNlMeansDenoising(gray, h=12)
+    clahe = cv2.createCLAHE(clipLimit=2.5, tileGridSize=(8, 8))
     enhanced = clahe.apply(denoised)
     _, binary = cv2.threshold(enhanced, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    scaled = cv2.resize(binary, None, fx=3, fy=3, interpolation=cv2.INTER_CUBIC)
+    scaled = cv2.resize(binary, None, fx=4, fy=4, interpolation=cv2.INTER_CUBIC)
     kernel = np.ones((2, 2), np.uint8)
     cleaned = cv2.morphologyEx(scaled, cv2.MORPH_CLOSE, kernel)
     
     return cleaned
-
 
 
 def preprocess_inverted(image: np.ndarray) -> np.ndarray:
@@ -249,7 +273,6 @@ def preprocess_inverted(image: np.ndarray) -> np.ndarray:
 
 
 def run_easyocr(image: np.ndarray) -> str:
-    """Führt EasyOCR aus"""
     if EASYOCR_READER is None:
         return ""
     
@@ -263,7 +286,6 @@ def run_easyocr(image: np.ndarray) -> str:
         text = '\n'.join(results)
         return text
     except Exception as e:
-        print(f"⚠ EasyOCR Fehler: {e}")
         return ""
 
 
@@ -273,114 +295,120 @@ def run_tesseract(image: np.ndarray, psm: int = 6) -> str:
         text = pytesseract.image_to_string(image, lang='deu', config=config)
         return text
     except Exception as e:
-        print(f"⚠ Tesseract Fehler: {e}")
         return ""
 
 
-def run_hybrid_ocr(image: np.ndarray) -> List[Dict]:
+def run_hybrid_ocr_parallel(image: np.ndarray, preprocessing_mode: str) -> List[Dict]:
     results = []
     
-    print("ℹ OCR-Strategie 1: EasyOCR + Ultra-Aggressive")
-    img1 = preprocess_ultra_aggressive(image)
+    if preprocessing_mode == "ultra_aggressive":
+        img1 = preprocess_ultra_aggressive(image)
+        img2 = preprocess_aggressive(image)
+    elif preprocessing_mode == "aggressive":
+        img1 = preprocess_aggressive(image)
+        img2 = preprocess_standard(image)
+    else:
+        img1 = preprocess_standard(image)
+        img2 = preprocess_aggressive(image)
+    
+    print(f"OCR Strategy 1: EasyOCR + {preprocessing_mode}")
     text1 = run_easyocr(img1)
     quality1 = len([c for c in text1 if c.isalpha()])
     results.append({
-        "strategy": "easyocr_ultra_aggressive",
+        "strategy": f"easyocr_{preprocessing_mode}",
         "text": text1,
         "quality": quality1,
         "engine": "easyocr"
     })
     
-    if quality1 > 100:
-        print(f"✓ Exzellente Qualität erreicht ({quality1} Buchstaben)")
+    if quality1 > 120:
+        print(f"Excellent quality ({quality1} chars), stopping")
         return results
     
-    print("ℹ OCR-Strategie 2: EasyOCR + Aggressive")
-    img2 = preprocess_aggressive(image)
+    print(f"OCR Strategy 2: EasyOCR + fallback")
     text2 = run_easyocr(img2)
     quality2 = len([c for c in text2 if c.isalpha()])
     results.append({
-        "strategy": "easyocr_aggressive",
+        "strategy": f"easyocr_fallback",
         "text": text2,
         "quality": quality2,
         "engine": "easyocr"
     })
     
-    if quality2 > 100:
+    if quality2 > 120:
         results.sort(key=lambda x: x['quality'], reverse=True)
         return results
     
-    print("ℹ OCR-Strategie 3: EasyOCR + Standard")
-    img3 = preprocess_standard(image)
-    text3 = run_easyocr(img3)
-    quality3 = len([c for c in text3 if c.isalpha()])
-    results.append({
-        "strategy": "easyocr_standard",
-        "text": text3,
-        "quality": quality3,
-        "engine": "easyocr"
-    })
+    best_quality = max(quality1, quality2)
     
-    best_quality = max(quality1, quality2, quality3)
-    if best_quality > 50:
-        print("ℹ OCR-Strategie 4: Tesseract + Ultra-Aggressive")
-        text4 = run_tesseract(img1, psm=6)
+    if best_quality > 60:
+        print("OCR Strategy 3: Tesseract backup")
+        text3 = run_tesseract(img1, psm=6)
         results.append({
-            "strategy": "tesseract_ultra_aggressive_psm6",
-            "text": text4,
-            "quality": len([c for c in text4 if c.isalpha()]),
+            "strategy": f"tesseract_{preprocessing_mode}",
+            "text": text3,
+            "quality": len([c for c in text3 if c.isalpha()]),
             "engine": "tesseract"
         })
     else:
-        print("ℹ OCR-Strategie 4: Tesseract + Ultra-Aggressive PSM6")
-        text4 = run_tesseract(img1, psm=6)
+        print("OCR Strategy 3: Tesseract PSM6")
+        text3 = run_tesseract(img1, psm=6)
         results.append({
-            "strategy": "tesseract_ultra_aggressive_psm6",
+            "strategy": f"tesseract_{preprocessing_mode}_psm6",
+            "text": text3,
+            "quality": len([c for c in text3 if c.isalpha()]),
+            "engine": "tesseract"
+        })
+        
+        print("OCR Strategy 4: Tesseract PSM4")
+        text4 = run_tesseract(img2, psm=4)
+        results.append({
+            "strategy": f"tesseract_fallback_psm4",
             "text": text4,
             "quality": len([c for c in text4 if c.isalpha()]),
             "engine": "tesseract"
         })
         
-        print("ℹ OCR-Strategie 5: Tesseract + Aggressive PSM4")
-        text5 = run_tesseract(img2, psm=4)
-        results.append({
-            "strategy": "tesseract_aggressive_psm4",
-            "text": text5,
-            "quality": len([c for c in text5 if c.isalpha()]),
-            "engine": "tesseract"
-        })
-        
-        print("ℹ OCR-Strategie 6: EasyOCR + Inverted")
-        img6 = preprocess_inverted(image)
-        text6 = run_easyocr(img6)
-        results.append({
-            "strategy": "easyocr_inverted",
-            "text": text6,
-            "quality": len([c for c in text6 if c.isalpha()]),
-            "engine": "easyocr"
-        })
+        if best_quality < 40:
+            print("OCR Strategy 5: Inverted")
+            img_inv = preprocess_inverted(image)
+            text5 = run_easyocr(img_inv)
+            results.append({
+                "strategy": "easyocr_inverted",
+                "text": text5,
+                "quality": len([c for c in text5 if c.isalpha()]),
+                "engine": "easyocr"
+            })
     
     results.sort(key=lambda x: x['quality'], reverse=True)
-    print(f"✓ Beste Strategie: {results[0]['strategy']} ({results[0]['quality']} Buchstaben, Engine: {results[0]['engine']})")
+    print(f"Best: {results[0]['strategy']} ({results[0]['quality']} chars, {results[0]['engine']})")
     
     return results
 
 
-def is_likely_location_keyword(word: str) -> bool:
+def normalize_word(word: str) -> str:
+    word_lower = word.lower()
+    if word_lower in TITLE_PREFIXES:
+        return None
+    return word
+
+
+def is_location_keyword(word: str) -> bool:
     if not FILTER_ENABLED:
         return False
     
+    word_lower = word.lower()
     for keyword in COMPANY_KEYWORDS:
         if CASE_SENSITIVE:
             if keyword in word:
                 return True
         else:
-            if keyword.lower() in word.lower():
+            if keyword.lower() in word_lower:
                 return True
     return False
 
 
-def extract_all_capitalized_words(text: str) -> Set[str]:
+def extract_capitalized_words(text: str) -> Set[str]:
     if not text or not text.strip():
         return set()
     
@@ -392,32 +420,39 @@ def extract_all_capitalized_words(text: str) -> Set[str]:
         
         for word in words:
             if word and word[0].isupper():
-                if not is_likely_location_keyword(word):
+                normalized = normalize_word(word)
+                if normalized and not is_location_keyword(word):
                     word_pool.add(word)
     
-    print(f"ℹ Word Pool: {len(word_pool)} großgeschriebene Wörter gefunden: {sorted(word_pool)}")
+    print(f"Word pool: {len(word_pool)} words: {sorted(word_pool)}")
     return word_pool
 
 
-def create_name_combinations(word_pool: Set[str]) -> List[str]:
+def create_smart_combinations(word_pool: Set[str]) -> List[Tuple[str, int]]:
     words_list = sorted(list(word_pool))
-    combinations_list = []
+    combinations_with_priority = []
     
-    combinations_list.extend(words_list)
+    for word in words_list:
+        combinations_with_priority.append((word, 1))
     
     if len(words_list) >= 2:
         for combo in combinations(words_list, 2):
-            combinations_list.append(f"{combo[0]} {combo[1]}")
+            combinations_with_priority.append((f"{combo[0]} {combo[1]}", 3))
+        
+        for perm in permutations(words_list, 2):
+            combinations_with_priority.append((f"{perm[0]} {perm[1]}", 2))
     
-    if len(words_list) >= 3 and len(words_list) <= 8:
+    if len(words_list) >= 3 and len(words_list) <= 6:
         for combo in combinations(words_list, 3):
-            combinations_list.append(f"{combo[0]} {combo[1]} {combo[2]}")
+            combinations_with_priority.append((f"{combo[0]} {combo[1]} {combo[2]}", 4))
     
-    print(f"ℹ {len(combinations_list)} Kombinationen erstellt aus Word Pool")
-    return combinations_list
+    combinations_with_priority.sort(key=lambda x: x[1], reverse=True)
+    
+    print(f"Created {len(combinations_with_priority)} combinations")
+    return combinations_with_priority
 
 
-def filter_by_location_match(candidates: List[str]) -> List[str]:
+def filter_by_locations(candidates: List[str]) -> List[str]:
     if not FILTER_ENABLED or not KNOWN_LOCATIONS:
         return candidates
     
@@ -431,17 +466,84 @@ def filter_by_location_match(candidates: List[str]) -> List[str]:
         )
         
         if match and match[1] >= LOCATION_FUZZY_THRESHOLD:
-            print(f"ℹ Gefiltert (Standort): '{candidate}' → '{match[0]}' ({match[1]}%)")
+            print(f"Filtered location: '{candidate}' -> '{match[0]}' ({match[1]}%)")
         else:
             filtered.append(candidate)
     
     return filtered
 
 
-def match_word_pool_to_recipients(word_pool: Set[str]) -> Dict:
+def advanced_fuzzy_match(candidate: str, recipients: List[str]) -> Tuple[Optional[str], int, str]:
+    scorers = {
+        "token_set_ratio": (fuzz.token_set_ratio, 1.0),
+        "token_sort_ratio": (fuzz.token_sort_ratio, 0.95),
+        "partial_token_set_ratio": (fuzz.partial_token_set_ratio, 0.9),
+        "partial_ratio": (fuzz.partial_ratio, 0.85),
+        "ratio": (fuzz.ratio, 0.8)
+    }
+    
+    best_match = None
+    best_score = 0
+    best_method = None
+    
+    for method_name, (scorer, weight) in scorers.items():
+        match = process.extractOne(candidate, recipients, scorer=scorer)
+        if match:
+            weighted_score = match[1] * weight
+            if weighted_score > best_score:
+                best_score = int(match[1])
+                best_match = match[0]
+                best_method = method_name
+    
+    return best_match, best_score, best_method
+
+
+def levenshtein_name_parts_match(word_pool: Set[str], recipients: List[str]) -> Tuple[Optional[str], int, str]:
+    best_recipient = None
+    best_score = 0
+    
+    for recipient in recipients:
+        recipient_parts = set(part.lower() for part in recipient.split())
+        word_pool_lower = set(w.lower() for w in word_pool)
+        
+        common_parts = recipient_parts & word_pool_lower
+        
+        if common_parts:
+            similarity = len(common_parts) / len(recipient_parts)
+            score = int(similarity * 100)
+            
+            if score > best_score:
+                best_score = score
+                best_recipient = recipient
+    
+    if best_score >= 50:
+        return best_recipient, best_score, "name_parts_match"
+    
+    for word in word_pool:
+        word_lower = word.lower()
+        if word_lower in NAME_PARTS_CACHE:
+            possible_recipients = NAME_PARTS_CACHE[word_lower]
+            for recipient in possible_recipients:
+                for part in recipient.split():
+                    distance = Levenshtein.distance(word_lower, part.lower())
+                    max_len = max(len(word_lower), len(part))
+                    similarity = (max_len - distance) / max_len
+                    score = int(similarity * 100)
+                    
+                    if score > best_score and score >= 80:
+                        best_score = score
+                        best_recipient = recipient
+    
+    if best_recipient:
+        return best_recipient, best_score, "levenshtein_parts"
+    
+    return None, 0, "none"
+
+
+def match_word_pool_comprehensive(word_pool: Set[str]) -> Dict:
     if not word_pool:
         return {
-            "name": "Keine Wörter gefunden",
+            "name": "No words found",
             "confidence": 0,
             "ocr_text": None,
             "method": "no_words",
@@ -450,7 +552,7 @@ def match_word_pool_to_recipients(word_pool: Set[str]) -> Dict:
     
     if not KNOWN_RECIPIENTS:
         return {
-            "name": "Keine Empfängerliste verfügbar",
+            "name": "No recipient list available",
             "confidence": 0,
             "ocr_text": None,
             "method": "no_recipient_list",
@@ -458,66 +560,42 @@ def match_word_pool_to_recipients(word_pool: Set[str]) -> Dict:
         }
     
     word_pool_string = " ".join(sorted(word_pool))
-    print(f"ℹ Matching Word Pool gegen {len(KNOWN_RECIPIENTS)} Empfänger...")
-    print(f"ℹ Word Pool String: '{word_pool_string}'")
-    
-    scorers = {
-        "token_set_ratio": fuzz.token_set_ratio,
-        "token_sort_ratio": fuzz.token_sort_ratio,
-        "partial_token_set_ratio": fuzz.partial_token_set_ratio,
-        "partial_ratio": fuzz.partial_ratio
-    }
+    print(f"Matching word pool: '{word_pool_string}'")
     
     best_match = None
     best_score = 0
     best_method = None
     
-    for method_name, scorer in scorers.items():
-        match = process.extractOne(
-            word_pool_string,
-            KNOWN_RECIPIENTS,
-            scorer=scorer
-        )
-        
-        if match and match[1] > best_score:
-            best_score = match[1]
-            best_match = match[0]
-            best_method = f"word_pool_{method_name}"
+    match, score, method = advanced_fuzzy_match(word_pool_string, KNOWN_RECIPIENTS)
+    if score > best_score:
+        best_match = match
+        best_score = score
+        best_method = f"word_pool_{method}"
     
-    combinations_list = create_name_combinations(word_pool)
-    combinations_list = filter_by_location_match(combinations_list)
+    combinations = create_smart_combinations(word_pool)
+    filtered_combinations = filter_by_locations([c[0] for c in combinations])
     
-    for candidate in combinations_list:
-        for method_name, scorer in scorers.items():
-            match = process.extractOne(
-                candidate,
-                KNOWN_RECIPIENTS,
-                scorer=scorer
-            )
-            
-            if match and match[1] > best_score:
-                best_score = match[1]
-                best_match = match[0]
-                best_method = f"combination_{method_name}"
-                print(f"ℹ Besserer Match: '{candidate}' → '{best_match}' ({best_score}%, {best_method})")
+    for candidate in filtered_combinations[:20]:
+        match, score, method = advanced_fuzzy_match(candidate, KNOWN_RECIPIENTS)
+        if score > best_score:
+            best_match = match
+            best_score = score
+            best_method = f"combination_{method}"
+            print(f"Better: '{candidate}' -> '{best_match}' ({best_score}%, {best_method})")
     
-    for word in word_pool:
-        for recipient in KNOWN_RECIPIENTS:
-            recipient_parts = recipient.split()
-            
-            for part in recipient_parts:
-                score = fuzz.ratio(word.lower(), part.lower())
-                
-                if score > best_score and score >= 85:
-                    best_score = score
-                    best_match = recipient
-                    best_method = f"single_word_match_{word}"
-                    print(f"ℹ Einzelwort-Match: '{word}' → '{recipient}' ({score}%)")
+    parts_match, parts_score, parts_method = levenshtein_name_parts_match(word_pool, KNOWN_RECIPIENTS)
+    if parts_score > best_score:
+        best_match = parts_match
+        best_score = parts_score
+        best_method = parts_method
+        print(f"Name parts: '{word_pool_string}' -> '{best_match}' ({best_score}%)")
     
     if best_match:
-        print(f"✓ Bester Match: '{word_pool_string}' → '{best_match}' (Score: {best_score}%, Methode: {best_method})")
+        print(f"Best: '{word_pool_string}' -> '{best_match}' ({best_score}%, {best_method})")
     
-    if best_match and best_score >= FUZZY_THRESHOLD:
+    adjusted_threshold = FUZZY_THRESHOLD - 5 if best_method and "levenshtein" in best_method else FUZZY_THRESHOLD
+    
+    if best_match and best_score >= adjusted_threshold:
         return {
             "name": best_match,
             "confidence": best_score,
@@ -525,9 +603,9 @@ def match_word_pool_to_recipients(word_pool: Set[str]) -> Dict:
             "method": best_method,
             "word_pool": sorted(list(word_pool)),
             "matched_from_list": True,
-            "fuzzy_threshold_used": FUZZY_THRESHOLD
+            "fuzzy_threshold_used": adjusted_threshold
         }
-    elif ENABLE_FALLBACK and best_match and best_score >= 50:
+    elif ENABLE_FALLBACK and best_match and best_score >= 45:
         return {
             "name": best_match,
             "confidence": best_score,
@@ -535,41 +613,37 @@ def match_word_pool_to_recipients(word_pool: Set[str]) -> Dict:
             "method": f"{best_method}_fallback",
             "word_pool": sorted(list(word_pool)),
             "matched_from_list": True,
-            "warning": f"Niedrige Übereinstimmung ({best_score}%). Bitte prüfen.",
-            "fuzzy_threshold_used": FUZZY_THRESHOLD
+            "warning": f"Low confidence ({best_score}%). Please verify.",
+            "fuzzy_threshold_used": adjusted_threshold
         }
     else:
         return {
-            "name": "Keinen passenden Empfänger gefunden",
+            "name": "No suitable recipient found",
             "confidence": best_score if best_match else 0,
             "ocr_text": word_pool_string,
             "method": "no_sufficient_match",
             "word_pool": sorted(list(word_pool)),
             "matched_from_list": False,
-            "warning": f"Bester Match: '{best_match}' mit {best_score}% (Threshold: {FUZZY_THRESHOLD}%)",
-            "recommendation": "Prüfen Sie ob der Empfänger in recipients.json enthalten ist."
+            "warning": f"Best: '{best_match}' with {best_score}% (Threshold: {adjusted_threshold}%)",
+            "recommendation": "Check if recipient is in recipients.json"
         }
 
 
-def extract_recipient_from_text(text: str) -> Dict:
-    word_pool = extract_all_capitalized_words(text)
-    
-    result = match_word_pool_to_recipients(word_pool)
-    
+def extract_recipient_from_ocr(text: str) -> Dict:
+    word_pool = extract_capitalized_words(text)
+    result = match_word_pool_comprehensive(word_pool)
     return result
 
 
-def extract_recipient_multi_strategy(ocr_results: List[Dict]) -> Dict:
+def extract_best_recipient(ocr_results: List[Dict]) -> Dict:
     all_matches = []
     
     for ocr_result in ocr_results:
         text = ocr_result["text"]
-        
-        result = extract_recipient_from_text(text)
+        result = extract_recipient_from_ocr(text)
         result["ocr_strategy"] = ocr_result["strategy"]
         result["ocr_quality"] = ocr_result["quality"]
         result["ocr_engine"] = ocr_result["engine"]
-        
         all_matches.append(result)
     
     all_matches.sort(
@@ -578,7 +652,6 @@ def extract_recipient_multi_strategy(ocr_results: List[Dict]) -> Dict:
     )
     
     best_result = all_matches[0]
-    
     best_result["total_strategies_tested"] = len(ocr_results)
     best_result["strategies_with_match"] = sum(1 for m in all_matches if m.get("matched_from_list", False))
     
@@ -591,64 +664,31 @@ async def upload_image(image_data: ImageBase64):
     
     try:
         if not KNOWN_RECIPIENTS:
-            raise HTTPException(
-                status_code=500,
-                detail="CRITICAL: Keine Empfängerliste geladen."
-            )
+            raise HTTPException(status_code=500, detail="No recipient list loaded")
         
         img_bytes = base64.b64decode(image_data.img_body_base64)
         pil_image = Image.open(BytesIO(img_bytes))
-        
         pil_image = convert_heic_to_rgb(pil_image)
-        
+        pil_image = optimize_image_size(pil_image)
         numpy_image = np.array(pil_image)
-
+        
         quality_info = check_image_quality(numpy_image)
-        print(f"ℹ Bildqualität: {quality_info['quality_score']}/100")
-
-        pil_image = enhance_image_pil(pil_image, quality_info)
-        numpy_image = np.array(pil_image)
-
-        ocr_results = run_hybrid_ocr(numpy_image)
-
-        recipient_result = extract_recipient_multi_strategy(ocr_results)
-
-        best_ocr_text = ocr_results[0]["text"]
+        print(f"Quality: {quality_info['quality_score']}/100, mode: {quality_info['preprocessing_mode']}")
         
+        pil_image = enhance_image_adaptive(pil_image, quality_info)
+        numpy_image = np.array(pil_image)
+        
+        ocr_results = run_hybrid_ocr_parallel(numpy_image, quality_info['preprocessing_mode'])
+        recipient_result = extract_best_recipient(ocr_results)
+        
+        best_ocr_text = ocr_results[0]["text"]
         processing_time = round(time.time() - start_time, 2)
         
-        image_hash = hashlib.md5(image_data.img_body_base64.encode()).hexdigest()[:16]
-         
-        try:
-            async with httpx.AsyncClient() as client:
-                await client.post(
-                    "http://localhost:8000/metrics/log",
-                    json={
-                        "success": recipient_result.get("matched_from_list", False),
-                        "recipient": recipient_result["name"],
-                        "confidence": recipient_result.get("confidence", 0),
-                        "matched_from_list": recipient_result.get("matched_from_list", False),
-                        "method": recipient_result.get("method", "unknown"),
-                        "ocr_strategy": recipient_result.get("ocr_strategy", "unknown"),
-                        "ocr_engine": recipient_result.get("ocr_engine", "unknown"),
-                        "ocr_quality": recipient_result.get("ocr_quality", 0),
-                        "image_quality_score": quality_info["quality_score"],
-                        "processing_time": processing_time,
-                        "image_size": len(img_bytes),
-                        "image_format": pil_image.format or "Unknown",
-                        "image_hash": image_hash,
-                        "word_pool": recipient_result.get("word_pool", [])
-                    },
-                    timeout=5.0
-                )
-        except Exception as log_error:
-            print(f"⚠ Metrics logging failed: {log_error}")
+        print(f"Processing complete in {processing_time}s")
         
-        print(f"✓ Verarbeitung abgeschlossen in {processing_time}s")
-
         return {
             "success": True,
-            "message": "Bild erfolgreich verarbeitet",
+            "message": "Image processed with word-pool matching",
             "processing_time_seconds": processing_time,
             "image_size_bytes": len(img_bytes),
             "image_format": pil_image.format or "Unknown",
@@ -668,23 +708,13 @@ async def upload_image(image_data: ImageBase64):
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
-        print(f"✗ Fehler: {error_trace}")
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "error": str(e),
-                "type": type(e).__name__
-            }
-        )
+        print(f"Error: {error_trace}")
+        raise HTTPException(status_code=500, detail={"error": str(e), "type": type(e).__name__})
 
 
 @router.get("/recipients")
 async def get_recipients():
-    return {
-        "recipients": KNOWN_RECIPIENTS,
-        "count": len(KNOWN_RECIPIENTS),
-        "settings": RECIPIENT_SETTINGS
-    }
+    return {"recipients": KNOWN_RECIPIENTS, "count": len(KNOWN_RECIPIENTS), "settings": RECIPIENT_SETTINGS}
 
 
 @router.get("/locations")
@@ -703,15 +733,11 @@ async def reload_recipients():
     global KNOWN_RECIPIENTS, RECIPIENT_SETTINGS, FUZZY_THRESHOLD, MIN_WORD_LENGTH, ENABLE_FALLBACK
     
     KNOWN_RECIPIENTS, RECIPIENT_SETTINGS = load_recipients()
-    FUZZY_THRESHOLD = RECIPIENT_SETTINGS.get("fuzzy_threshold", 70)
+    FUZZY_THRESHOLD = RECIPIENT_SETTINGS.get("fuzzy_threshold", 65)
     MIN_WORD_LENGTH = RECIPIENT_SETTINGS.get("min_word_length", 2)
     ENABLE_FALLBACK = RECIPIENT_SETTINGS.get("enable_fallback", True)
     
-    return {
-        "success": True,
-        "message": "Empfängerliste neu geladen",
-        "recipients_count": len(KNOWN_RECIPIENTS)
-    }
+    return {"success": True, "message": "Recipients reloaded", "recipients_count": len(KNOWN_RECIPIENTS)}
 
 
 @router.post("/reload-locations")
@@ -724,24 +750,14 @@ async def reload_locations():
     FILTER_ENABLED = LOCATION_SETTINGS.get("filter_enabled", True)
     CASE_SENSITIVE = LOCATION_SETTINGS.get("case_sensitive", False)
     
-    return {
-        "success": True,
-        "message": "Standortliste neu geladen",
-        "locations_count": len(KNOWN_LOCATIONS)
-    }
+    return {"success": True, "message": "Locations reloaded", "locations_count": len(KNOWN_LOCATIONS)}
 
 
 @router.post("/reload-all")
 async def reload_all():
     recipients_result = await reload_recipients()
     locations_result = await reload_locations()
-    
-    return {
-        "success": True,
-        "message": "Alle Listen neu geladen",
-        "recipients": recipients_result,
-        "locations": locations_result
-    }
+    return {"success": True, "message": "All lists reloaded", "recipients": recipients_result, "locations": locations_result}
 
 
 @router.get("/health")
@@ -756,7 +772,8 @@ async def health_check():
         "locations_count": len(KNOWN_LOCATIONS),
         "filter_enabled": FILTER_ENABLED,
         "fuzzy_threshold": FUZZY_THRESHOLD,
-        "version": "3.0.0-word-pool-matching"
+        "cache_size": len(RECIPIENT_CACHE),
+        "version": "4.0.0-optimized"
     }
 
 
@@ -774,14 +791,18 @@ async def get_statistics():
         "data": {
             "recipients_count": len(KNOWN_RECIPIENTS),
             "locations_count": len(KNOWN_LOCATIONS),
-            "keywords_count": len(COMPANY_KEYWORDS)
+            "keywords_count": len(COMPANY_KEYWORDS),
+            "cached_recipients": len(RECIPIENT_CACHE),
+            "cached_name_parts": len(NAME_PARTS_CACHE)
         },
-        "ocr_engines": {
-            "easyocr": EASYOCR_READER is not None,
-            "tesseract": True
-        },
+        "ocr_engines": {"easyocr": EASYOCR_READER is not None, "tesseract": True},
         "features": {
             "word_pool_matching": True,
-            "separated_name_handling": True
+            "levenshtein_matching": True,
+            "name_parts_cache": True,
+            "adaptive_preprocessing": True,
+            "parallel_processing": True,
+            "smart_combinations": True,
+            "permutations": True
         }
     }
