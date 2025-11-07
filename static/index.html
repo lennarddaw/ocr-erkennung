@@ -222,10 +222,7 @@
             padding: 40px;
             border-radius: 4px;
             text-align: center;
-            min-width: 320px;
-            max-width: 520px;
-            max-height: 80vh;
-            overflow-y: auto;
+            min-width: 300px;
         }
 
         .spinner {
@@ -247,65 +244,6 @@
             color: #666;
             font-size: 0.95em;
             margin-top: 10px;
-        }
-
-        .progress-details {
-            margin-top: 20px;
-            text-align: left;
-        }
-
-        .progress-details h4 {
-            font-size: 1em;
-            color: #444;
-            margin-bottom: 10px;
-        }
-
-        .progress-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .progress-item {
-            padding: 10px 12px;
-            border-radius: 4px;
-            background: #f5f5f5;
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-            border-left: 4px solid #ccc;
-        }
-
-        .progress-item .progress-name {
-            font-weight: 500;
-            color: #333;
-        }
-
-        .progress-item .progress-message {
-            font-size: 0.9em;
-            color: #666;
-        }
-
-        .progress-item.status-pending {
-            border-left-color: #9e9e9e;
-        }
-
-        .progress-item.status-processing {
-            border-left-color: #2196f3;
-        }
-
-        .progress-item.status-done {
-            border-left-color: #4caf50;
-        }
-
-        .progress-item.status-error {
-            border-left-color: #f44336;
-        }
-
-        .progress-empty {
-            text-align: center;
-            color: #999;
-            font-size: 0.9em;
         }
 
         .progress-bar {
@@ -466,51 +404,6 @@
             color: #ff9800;
         }
 
-        .camera-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 2500;
-            padding: 20px;
-        }
-
-        .camera-modal.active {
-            display: flex;
-        }
-
-        .camera-content {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 15px;
-            max-width: 480px;
-            width: 100%;
-        }
-
-        .camera-content video {
-            width: 100%;
-            border-radius: 8px;
-            background: black;
-        }
-
-        .camera-content canvas {
-            display: none;
-        }
-
-        .camera-controls {
-            display: flex;
-            gap: 10px;
-        }
-
         .image-modal {
             display: none;
             position: fixed;
@@ -615,27 +508,12 @@
                     <div class="progress-fill" id="progressFill"></div>
                 </div>
                 <p class="processing-status" id="processingStatus">0 von 0 abgeschlossen</p>
-                <div class="progress-details">
-                    <h4>Fortschritt je Bild</h4>
-                    <div class="progress-list" id="progressList"></div>
-                </div>
             </div>
         </div>
 
         <div class="results-section" id="resultsSection">
             <div class="stats-bar" id="statsBar"></div>
             <div id="resultsContainer"></div>
-        </div>
-
-        <div class="camera-modal" id="cameraModal">
-            <div class="camera-content">
-                <video id="cameraVideo" autoplay playsinline></video>
-                <canvas id="cameraCanvas"></canvas>
-                <div class="camera-controls">
-                    <button class="btn btn-primary" id="captureBtn">Foto aufnehmen</button>
-                    <button class="btn btn-secondary" id="closeCameraBtn">Abbrechen</button>
-                </div>
-            </div>
         </div>
 
         <div class="image-modal" id="imageModal">
@@ -648,7 +526,6 @@
         let selectedImages = [];
         let convertingCount = 0;
         let progressInterval = null;
-        let cameraStream = null;
 
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
@@ -659,12 +536,6 @@
         const previewSection = document.getElementById('previewSection');
         const previewInfo = document.getElementById('previewInfo');
         const previewGrid = document.getElementById('previewGrid');
-        const progressList = document.getElementById('progressList');
-        const cameraModal = document.getElementById('cameraModal');
-        const cameraVideo = document.getElementById('cameraVideo');
-        const cameraCanvas = document.getElementById('cameraCanvas');
-        const captureBtn = document.getElementById('captureBtn');
-        const closeCameraBtn = document.getElementById('closeCameraBtn');
 
         uploadArea.addEventListener('click', () => {
             fileInput.click();
@@ -689,42 +560,13 @@
             handleFiles(e.target.files);
         });
 
-        cameraBtn.addEventListener('click', async () => {
-            if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                try {
-                    await openCameraModal();
-                } catch (error) {
-                    console.error('Kamera konnte nicht geöffnet werden:', error);
-                    cameraInput.click();
-                }
-            } else {
-                cameraInput.click();
-            }
+        cameraBtn.addEventListener('click', () => {
+            cameraInput.click();
         });
 
         cameraInput.addEventListener('change', (e) => {
             handleFiles(e.target.files);
         });
-
-        if (captureBtn) {
-            captureBtn.addEventListener('click', () => {
-                capturePhoto();
-            });
-        }
-
-        if (closeCameraBtn) {
-            closeCameraBtn.addEventListener('click', () => {
-                closeCameraModal();
-            });
-        }
-
-        if (cameraModal) {
-            cameraModal.addEventListener('click', (event) => {
-                if (event.target === cameraModal) {
-                    closeCameraModal();
-                }
-            });
-        }
 
         resetBtn.addEventListener('click', () => {
             if (confirm('Alle ausgewählten Bilder löschen?')) {
@@ -739,73 +581,11 @@
 
         analyseBtn.addEventListener('click', processImages);
 
-        async function openCameraModal() {
-            if (!cameraModal) return;
-
-            try {
-                cameraStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: { ideal: 'environment' } },
-                    audio: false
-                });
-                cameraVideo.srcObject = cameraStream;
-                cameraModal.classList.add('active');
-            } catch (error) {
-                stopCameraStream();
-                throw error;
-            }
-        }
-
-        function stopCameraStream() {
-            if (cameraStream) {
-                const tracks = cameraStream.getTracks();
-                tracks.forEach(track => track.stop());
-                cameraStream = null;
-            }
-            if (cameraVideo) {
-                cameraVideo.srcObject = null;
-            }
-        }
-
-        function closeCameraModal() {
-            if (!cameraModal) return;
-            cameraModal.classList.remove('active');
-            stopCameraStream();
-        }
-
-        function capturePhoto() {
-            if (!cameraVideo || !cameraCanvas) return;
-
-            const videoWidth = cameraVideo.videoWidth || 1280;
-            const videoHeight = cameraVideo.videoHeight || 720;
-
-            cameraCanvas.width = videoWidth;
-            cameraCanvas.height = videoHeight;
-
-            const context = cameraCanvas.getContext('2d');
-            context.drawImage(cameraVideo, 0, 0, videoWidth, videoHeight);
-
-            const dataUrl = cameraCanvas.toDataURL('image/jpeg', 0.9);
-            const base64Data = dataUrl.split(',')[1];
-            const filename = `kamera-${new Date().toISOString().replace(/[:.]/g, '-')}.jpg`;
-
-            selectedImages.push({
-                file: null,
-                base64: base64Data,
-                preview: dataUrl,
-                name: filename,
-                isHeic: false,
-                converting: false
-            });
-
-            updatePreview();
-            closeCameraModal();
-        }
-
         function isHeicFile(file) {
             const name = file.name.toLowerCase();
             const type = file.type.toLowerCase();
-            return name.endsWith('.heic') ||
-                   name.endsWith('.heif') ||
+            return name.endsWith('.heic') || 
+                   name.endsWith('.heif') || 
                    type === 'image/heic' || 
                    type === 'image/heif';
         }
@@ -870,11 +650,6 @@
                             if (convertedBase64) {
                                 selectedImages[tempIndex].preview = `data:image/jpeg;base64,${convertedBase64}`;
                                 selectedImages[tempIndex].base64 = convertedBase64;
-                                const originalName = file.name || `Bild_${tempIndex + 1}.heic`;
-                                const jpgName = originalName.includes('.')
-                                    ? originalName.replace(/\.[^/.]+$/, '.jpg')
-                                    : `${originalName}.jpg`;
-                                selectedImages[tempIndex].name = jpgName;
                                 selectedImages[tempIndex].converting = false;
                             } else {
                                 selectedImages[tempIndex].converting = false;
@@ -967,66 +742,17 @@
             updatePreview();
         }
 
-        function renderProgressItems(items) {
-            if (!progressList) return;
-
-            progressList.innerHTML = '';
-
-            if (!items || items.length === 0) {
-                const emptyState = document.createElement('div');
-                emptyState.className = 'progress-empty';
-                emptyState.textContent = 'Warte auf Fortschritt...';
-                progressList.appendChild(emptyState);
-                return;
-            }
-
-            items.forEach((item, index) => {
-                const entry = document.createElement('div');
-                entry.className = `progress-item status-${item.status || 'pending'}`;
-
-                const nameDiv = document.createElement('div');
-                nameDiv.className = 'progress-name';
-                nameDiv.textContent = item.filename || `Bild ${index + 1}`;
-
-                const messageDiv = document.createElement('div');
-                messageDiv.className = 'progress-message';
-                messageDiv.textContent = item.message || '';
-
-                entry.appendChild(nameDiv);
-                entry.appendChild(messageDiv);
-
-                progressList.appendChild(entry);
-            });
-        }
-
-        function initializeProgressItems() {
-            const items = selectedImages.map((img, index) => ({
-                status: 'pending',
-                filename: img.name || `Bild ${index + 1}`,
-                message: 'Wartet auf Verarbeitung'
-            }));
-            renderProgressItems(items);
-        }
-
-        function clearProgressItems() {
-            if (!progressList) return;
-            progressList.innerHTML = '';
-        }
-
         async function fetchProgress() {
             try {
                 const response = await fetch('/ocr/batch-progress');
                 const data = await response.json();
-
+                
                 if (data.processing) {
                     const progressFill = document.getElementById('progressFill');
                     const processingStatus = document.getElementById('processingStatus');
-
+                    
                     progressFill.style.width = `${data.percentage}%`;
                     processingStatus.textContent = `${data.current} von ${data.total} abgeschlossen`;
-                    if (data.items) {
-                        renderProgressItems(data.items);
-                    }
                 }
             } catch (error) {
                 console.error('Error fetching progress:', error);
@@ -1047,14 +773,12 @@
             overlay.classList.add('active');
             progressFill.style.width = '0%';
             processingStatus.textContent = `0 von ${selectedImages.length} abgeschlossen`;
-            initializeProgressItems();
 
             // Start polling for progress
             progressInterval = setInterval(fetchProgress, 500);
 
-            const payload = selectedImages.map((img, index) => ({
-                img_body_base64: img.base64,
-                filename: img.name || `Bild ${index + 1}`
+            const payload = selectedImages.map(img => ({
+                img_body_base64: img.base64
             }));
 
             try {
@@ -1090,7 +814,6 @@
                     progressInterval = null;
                 }
                 overlay.classList.remove('active');
-                clearProgressItems();
             }
         }
 
@@ -1116,11 +839,7 @@
         // Close modal on ESC key
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
-                if (cameraModal && cameraModal.classList.contains('active')) {
-                    closeCameraModal();
-                } else {
-                    closeImageModal();
-                }
+                closeImageModal();
             }
         });
 
@@ -1172,21 +891,16 @@
                     : '';
 
                 const imageSrc = `data:image/jpeg;base64,${result.image_base64}`;
-                const displayName = result.filename || `Bild ${index + 1}`;
 
                 card.innerHTML = `
-                    <img src="${imageSrc}"
-                         alt="Bild ${index + 1}"
+                    <img src="${imageSrc}" 
+                         alt="Bild ${index + 1}" 
                          class="result-image"
                          onclick="openImageModal('${imageSrc}')">
                     <div class="result-info">
                         <h3>Bild ${index + 1} ${statusBadge}</h3>
-
+                        
                         ${result.success ? `
-                            <div class="info-row">
-                                <span class="label">Datei:</span>
-                                <span class="value">${displayName}</span>
-                            </div>
                             <div class="info-row">
                                 <span class="label">Empfänger:</span>
                                 <span class="value"><strong>${result.recipient}</strong></span>
@@ -1208,10 +922,6 @@
                             </div>
                             ${warningMessage}
                         ` : `
-                            <div class="info-row">
-                                <span class="label">Datei:</span>
-                                <span class="value">${displayName}</span>
-                            </div>
                             <div class="info-row">
                                 <span class="label">Fehler:</span>
                                 <span class="value" style="color: #f44336;">${result.error}</span>
