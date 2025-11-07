@@ -56,6 +56,14 @@ LOCATION_FUZZY_THRESHOLD = LOCATION_SETTINGS.get("location_fuzzy_threshold", 85)
 FILTER_ENABLED = LOCATION_SETTINGS.get("filter_enabled", True)
 CASE_SENSITIVE = LOCATION_SETTINGS.get("case_sensitive", False)
 
+# Global variable for batch progress tracking
+BATCH_PROGRESS = {
+    "processing": False,
+    "current": 0,
+    "total": 0,
+    "percentage": 0
+}
+
 
 def extract_recipient_from_ocr(text: str) -> Dict:
     word_pool = extract_capitalized_words(
@@ -230,8 +238,160 @@ async def health_check():
         "filter_enabled": FILTER_ENABLED,
         "fuzzy_threshold": FUZZY_THRESHOLD,
         "cache_size": len(RECIPIENT_CACHE),
-        "version": "4.0.0-modular"
+        "version": "4.1.0-batch-progress"
     }
+
+
+@router.get("/batch-progress")
+async def get_batch_progress():
+    """
+    Gibt den aktuellen Fortschritt der Batch-Verarbeitung zurück
+    """
+    return {
+        "processing": BATCH_PROGRESS["processing"],
+        "current": BATCH_PROGRESS["current"],
+        "total": BATCH_PROGRESS["total"],
+        "percentage": BATCH_PROGRESS["percentage"]
+    }
+
+
+@router.post("/convert-heic")
+async def convert_heic(image_data: ImageBase64):
+    """
+    Konvertiert ein HEIC-Bild zu JPG für die Browser-Vorschau
+    """
+    try:
+        img_bytes = base64.b64decode(image_data.img_body_base64)
+        pil_image = Image.open(BytesIO(img_bytes))
+        
+        # HEIC zu RGB konvertieren
+        pil_image = convert_heic_to_rgb(pil_image)
+        
+        # Als JPG zurückgeben
+        buffer = BytesIO()
+        pil_image.save(buffer, format='JPEG', quality=90)
+        buffer.seek(0)
+        
+        jpg_base64 = base64.b64encode(buffer.read()).decode('utf-8')
+        
+        return {
+            "success": True,
+            "converted_base64": jpg_base64,
+            "format": "JPEG",
+            "size": pil_image.size
+        }
+        
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"HEIC conversion error: {error_trace}")
+        raise HTTPException(status_code=500, detail={"error": str(e), "type": type(e).__name__})
+
+
+@router.post("/upload-images-batch")
+async def upload_images_batch(images_data: List[ImageBase64]):
+    """
+    Verarbeitet mehrere Bilder gleichzeitig mit Progress-Tracking
+    """
+    global BATCH_PROGRESS
+    
+    results = []
+    start_time = time.time()
+    
+    try:
+        if not KNOWN_RECIPIENTS:
+            raise HTTPException(status_code=500, detail="No recipient list loaded")
+        
+        # Initialize progress
+        BATCH_PROGRESS["processing"] = True
+        BATCH_PROGRESS["current"] = 0
+        BATCH_PROGRESS["total"] = len(images_data)
+        BATCH_PROGRESS["percentage"] = 0
+        
+        for idx, image_data in enumerate(images_data):
+            try:
+                # Verarbeite jedes Bild einzeln
+                img_bytes = base64.b64decode(image_data.img_body_base64)
+                pil_image = Image.open(BytesIO(img_bytes))
+                pil_image = convert_heic_to_rgb(pil_image)
+                pil_image = optimize_image_size(pil_image)
+                numpy_image = np.array(pil_image)
+                
+                quality_info = check_image_quality(numpy_image)
+                print(f"Image {idx+1}/{len(images_data)}: Quality {quality_info['quality_score']}/100")
+                
+                pil_image = enhance_image_adaptive(pil_image, quality_info)
+                numpy_image = np.array(pil_image)
+                
+                preprocess_funcs = {
+                    'ultra_aggressive': preprocess_ultra_aggressive,
+                    'aggressive': preprocess_aggressive,
+                    'standard': preprocess_standard,
+                    'inverted': preprocess_inverted
+                }
+                
+                ocr_results = run_hybrid_ocr_parallel(numpy_image, quality_info['preprocessing_mode'], preprocess_funcs)
+                recipient_result = extract_best_recipient(ocr_results)
+                
+                results.append({
+                    "image_index": idx,
+                    "success": True,
+                    "recipient": recipient_result["name"],
+                    "confidence": recipient_result.get("confidence", 0),
+                    "matched_from_list": recipient_result.get("matched_from_list", False),
+                    "method": recipient_result.get("method", "unknown"),
+                    "ocr_text": recipient_result.get("ocr_text", ""),
+                    "word_pool": recipient_result.get("word_pool", []),
+                    "quality_score": quality_info['quality_score'],
+                    "image_base64": image_data.img_body_base64,
+                    "warning": recipient_result.get("warning", None)
+                })
+                
+                # Update progress
+                BATCH_PROGRESS["current"] = idx + 1
+                BATCH_PROGRESS["percentage"] = int((idx + 1) / len(images_data) * 100)
+                
+            except Exception as e:
+                results.append({
+                    "image_index": idx,
+                    "success": False,
+                    "error": str(e),
+                    "image_base64": image_data.img_body_base64
+                })
+                print(f"Error processing image {idx+1}: {e}")
+                
+                # Update progress even on error
+                BATCH_PROGRESS["current"] = idx + 1
+                BATCH_PROGRESS["percentage"] = int((idx + 1) / len(images_data) * 100)
+        
+        total_time = round(time.time() - start_time, 2)
+        successful = sum(1 for r in results if r.get("success", False))
+        
+        # Reset progress
+        BATCH_PROGRESS["processing"] = False
+        BATCH_PROGRESS["current"] = 0
+        BATCH_PROGRESS["total"] = 0
+        BATCH_PROGRESS["percentage"] = 0
+        
+        return {
+            "success": True,
+            "message": f"Processed {len(images_data)} images",
+            "total_processing_time_seconds": total_time,
+            "images_processed": len(images_data),
+            "successful_matches": successful,
+            "failed_matches": len(images_data) - successful,
+            "results": results
+        }
+        
+    except HTTPException:
+        BATCH_PROGRESS["processing"] = False
+        raise
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Batch processing error: {error_trace}")
+        BATCH_PROGRESS["processing"] = False
+        raise HTTPException(status_code=500, detail={"error": str(e), "type": type(e).__name__})
 
 
 @router.get("/stats")
@@ -261,6 +421,7 @@ async def get_statistics():
             "name_parts_cache": True,
             "adaptive_preprocessing": True,
             "smart_combinations": True,
-            "modular_architecture": True
+            "modular_architecture": True,
+            "batch_progress_tracking": True
         }
     }

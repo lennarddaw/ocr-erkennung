@@ -12,230 +12,227 @@
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-            background: #f5f5f5;
-            color: #333;
-            line-height: 1.6;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background-color: #f5f5f5;
+            padding: 20px;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 2rem;
         }
 
-        header {
+        .header {
             background: white;
-            padding: 1.5rem;
-            margin-bottom: 2rem;
-            border: 1px solid #ddd;
+            padding: 30px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
         }
 
-        h1 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-        }
-
-        .subtitle {
-            color: #666;
-            font-size: 0.9rem;
+        .header h1 {
+            font-size: 2em;
+            color: #333;
+            font-weight: 500;
         }
 
         .upload-section {
             background: white;
-            padding: 2rem;
-            margin-bottom: 2rem;
-            border: 1px solid #ddd;
+            padding: 30px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 1.5em;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: 500;
         }
 
         .upload-area {
             border: 2px dashed #ccc;
-            padding: 3rem;
+            border-radius: 4px;
+            padding: 60px 20px;
             text-align: center;
+            background: #fafafa;
             cursor: pointer;
-            transition: border-color 0.3s;
+            transition: all 0.3s ease;
         }
 
         .upload-area:hover {
             border-color: #999;
+            background: #f5f5f5;
         }
 
         .upload-area.dragover {
-            border-color: #333;
-            background: #f9f9f9;
+            border-color: #666;
+            background: #eee;
         }
 
-        input[type="file"] {
-            display: none;
-        }
-
-        button {
-            background: #333;
-            color: white;
-            border: none;
-            padding: 0.75rem 1.5rem;
-            font-size: 1rem;
-            cursor: pointer;
-            border: 1px solid #333;
-        }
-
-        button:hover {
-            background: #555;
-        }
-
-        button:disabled {
-            background: #ccc;
-            border-color: #ccc;
-            cursor: not-allowed;
-        }
-
-        .results-section {
-            display: none;
-            background: white;
-            padding: 2rem;
-            border: 1px solid #ddd;
-            margin-bottom: 2rem;
-        }
-
-        .results-section.visible {
-            display: block;
-        }
-
-        .section-title {
-            font-size: 1.2rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            padding-bottom: 0.5rem;
-            border-bottom: 1px solid #ddd;
-        }
-
-        .result-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-        }
-
-        .result-card {
-            padding: 1rem;
-            border: 1px solid #e0e0e0;
-            background: #fafafa;
-        }
-
-        .result-card h3 {
-            font-size: 0.85rem;
-            font-weight: 600;
-            text-transform: uppercase;
+        .upload-text {
+            font-size: 1.1em;
             color: #666;
-            margin-bottom: 0.5rem;
-            letter-spacing: 0.5px;
+            margin-bottom: 10px;
         }
 
-        .result-card .value {
-            font-size: 1.5rem;
-            font-weight: 600;
+        .upload-subtext {
+            font-size: 0.9em;
+            color: #999;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 500;
+        }
+
+        .btn-primary {
+            background-color: #e0e0e0;
             color: #333;
         }
 
-        .result-card .subvalue {
-            font-size: 0.9rem;
-            color: #666;
-            margin-top: 0.25rem;
+        .btn-primary:hover:not(:disabled) {
+            background-color: #d0d0d0;
         }
 
-        .detail-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 2rem;
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
 
-        .detail-table th,
-        .detail-table td {
-            padding: 0.75rem;
-            text-align: left;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .detail-table th {
-            font-weight: 600;
-            background: #fafafa;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .detail-table td {
-            font-size: 0.95rem;
-        }
-
-        .detail-section {
-            margin-bottom: 2rem;
-        }
-
-        .image-preview {
-            max-width: 100%;
-            height: auto;
+        .btn-secondary {
+            background-color: white;
+            color: #333;
             border: 1px solid #ddd;
-            margin-top: 1rem;
         }
 
-        .status-indicator {
-            display: inline-block;
-            padding: 0.25rem 0.75rem;
-            border: 1px solid #ddd;
-            font-size: 0.85rem;
-            font-weight: 600;
+        .btn-secondary:hover:not(:disabled) {
+            background-color: #f5f5f5;
         }
 
-        .status-success {
-            background: #f0f0f0;
-            border-color: #333;
-        }
-
-        .status-warning {
-            background: #f9f9f9;
-            border-color: #999;
-        }
-
-        .status-error {
-            background: #fafafa;
-            border-color: #666;
-        }
-
-        .word-pool {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: 0.5rem;
-        }
-
-        .word-tag {
-            padding: 0.25rem 0.75rem;
-            background: #f0f0f0;
-            border: 1px solid #ddd;
-            font-size: 0.85rem;
-            font-family: monospace;
-        }
-
-        .loading {
+        .preview-section {
             display: none;
-            text-align: center;
-            padding: 2rem;
+            margin-top: 20px;
         }
 
-        .loading.visible {
+        .preview-section.active {
             display: block;
         }
 
+        .preview-info {
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            color: #666;
+            font-size: 0.95em;
+        }
+
+        .preview-info.converting {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .preview-item {
+            position: relative;
+            background: #f8f8f8;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .preview-item.converting {
+            opacity: 0.6;
+        }
+
+        .preview-item img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+        }
+
+        .preview-item .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: none;
+            border-radius: 3px;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+            padding: 0;
+            z-index: 10;
+        }
+
+        .preview-item .remove-btn:hover {
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .preview-item .filename {
+            padding: 8px;
+            font-size: 0.8em;
+            color: #666;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            background: white;
+        }
+
+        .processing-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .processing-overlay.active {
+            display: flex;
+        }
+
+        .processing-content {
+            background: white;
+            padding: 40px;
+            border-radius: 4px;
+            text-align: center;
+            min-width: 300px;
+        }
+
         .spinner {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #333;
-            border-radius: 50%;
             width: 40px;
             height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #666;
+            border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin: 0 auto 1rem;
+            margin: 0 auto 20px;
         }
 
         @keyframes spin {
@@ -243,221 +240,307 @@
             100% { transform: rotate(360deg); }
         }
 
-        .ocr-text-preview {
-            background: #f9f9f9;
-            border: 1px solid #e0e0e0;
-            padding: 1rem;
-            font-family: monospace;
-            font-size: 0.85rem;
-            white-space: pre-wrap;
-            max-height: 300px;
-            overflow-y: auto;
-            line-height: 1.4;
+        .processing-status {
+            color: #666;
+            font-size: 0.95em;
+            margin-top: 10px;
         }
 
-        .actions {
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 20px 0 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #666;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        .stats-bar {
+            background: white;
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: 300;
+            color: #333;
+        }
+
+        .stat-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .result-card {
+            background: white;
+            border-radius: 4px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: grid;
+            grid-template-columns: 180px 1fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .result-image {
+            width: 180px;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 4px;
+            border: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+
+        .result-image:hover {
+            opacity: 0.8;
+        }
+
+        .result-info h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            font-weight: 500;
+        }
+
+        .info-row {
             display: flex;
-            gap: 1rem;
-            margin-top: 1rem;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .label {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .value {
+            color: #333;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 3px;
+            font-size: 0.85em;
+            font-weight: 500;
+        }
+
+        .badge-success {
+            background: #4caf50;
+            color: white;
+        }
+
+        .badge-warning {
+            background: #ff9800;
+            color: white;
+        }
+
+        .badge-error {
+            background: #f44336;
+            color: white;
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: #666;
+            transition: width 0.5s ease;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+            color: #856404;
+        }
+
+        .warning-box strong {
+            display: block;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+            color: #ff9800;
+        }
+
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .image-modal.active {
+            display: flex;
+        }
+
+        .image-modal img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+
+        .image-modal .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
+            color: #333;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .image-modal .close-btn:hover {
+            background: #f0f0f0;
+        }
+
+        #fileInput, #cameraInput {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .result-card {
+                grid-template-columns: 1fr;
+            }
+
+            .result-image {
+                width: 100%;
+                height: 200px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <header>
+        <div class="header">
             <h1>OCR Empfänger-Erkennung</h1>
-        </header>
+        </div>
 
         <div class="upload-section">
             <h2 class="section-title">Bild hochladen</h2>
+            
             <div class="upload-area" id="uploadArea">
-                <p>Bild hier ablegen oder klicken zum Auswählen</p>
-                <p style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">Unterstützte Formate: JPG, PNG, HEIC</p>
+                <div class="upload-text">Bild hier ablegen oder klicken zum Auswählen</div>
+                <div class="upload-subtext">Unterstützte Formate: JPG, PNG, HEIC</div>
             </div>
-            <input type="file" id="fileInput" accept="image/*">
-            <div class="actions">
-                <button id="uploadBtn" disabled>Analyse starten</button>
-                <button id="clearBtn" style="background: white; color: #333; border: 1px solid #ddd;">Zurücksetzen</button>
+
+            <input type="file" id="fileInput" accept="image/*,.heic,.heif" multiple>
+            <input type="file" id="cameraInput" accept="image/*" capture="environment">
+
+            <div class="button-group">
+                <button class="btn btn-primary" id="analyseBtn" disabled>Analyse starten</button>
+                <button class="btn btn-secondary" id="cameraBtn">Kamera öffnen</button>
+                <button class="btn btn-secondary" id="resetBtn" disabled>Zurücksetzen</button>
+            </div>
+
+            <div class="preview-section" id="previewSection">
+                <div class="preview-info" id="previewInfo"></div>
+                <div class="preview-grid" id="previewGrid"></div>
             </div>
         </div>
 
-        <div class="loading" id="loading">
-            <div class="spinner"></div>
-            <p>Bild wird analysiert...</p>
+        <div class="processing-overlay" id="processingOverlay">
+            <div class="processing-content">
+                <div class="spinner"></div>
+                <h3>Bilder werden verarbeitet...</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <p class="processing-status" id="processingStatus">0 von 0 abgeschlossen</p>
+            </div>
         </div>
 
         <div class="results-section" id="resultsSection">
-            <h2 class="section-title">Analyseergebnis</h2>
+            <div class="stats-bar" id="statsBar"></div>
+            <div id="resultsContainer"></div>
+        </div>
 
-            <!-- Hauptergebnis -->
-            <div class="result-grid">
-                <div class="result-card">
-                    <h3>Erkannter Empfänger</h3>
-                    <div class="value" id="recipientName">-</div>
-                    <div class="subvalue">
-                        <span id="matchStatus" class="status-indicator">-</span>
-                    </div>
-                </div>
-
-                <div class="result-card">
-                    <h3>Confidence Score</h3>
-                    <div class="value" id="confidence">-%</div>
-                    <div class="subvalue" id="confidenceInfo">-</div>
-                </div>
-
-                <div class="result-card">
-                    <h3>Verarbeitungszeit</h3>
-                    <div class="value" id="processingTime">-</div>
-                    <div class="subvalue">Sekunden</div>
-                </div>
-
-                <div class="result-card">
-                    <h3>Bildqualität</h3>
-                    <div class="value" id="imageQuality">-</div>
-                    <div class="subvalue" id="qualityIssues">-</div>
-                </div>
-            </div>
-
-            <!-- Bilddetails -->
-            <div class="detail-section">
-                <h3 class="section-title">Bildparameter</h3>
-                <table class="detail-table">
-                    <tr>
-                        <th>Parameter</th>
-                        <th>Wert</th>
-                    </tr>
-                    <tr>
-                        <td>Dateigröße</td>
-                        <td id="imageSize">-</td>
-                    </tr>
-                    <tr>
-                        <td>Format</td>
-                        <td id="imageFormat">-</td>
-                    </tr>
-                    <tr>
-                        <td>Helligkeit</td>
-                        <td id="brightness">-</td>
-                    </tr>
-                    <tr>
-                        <td>Kontrast</td>
-                        <td id="contrast">-</td>
-                    </tr>
-                    <tr>
-                        <td>Schärfe</td>
-                        <td id="sharpness">-</td>
-                    </tr>
-                    <tr>
-                        <td>Qualitätsscore</td>
-                        <td id="qualityScore">-</td>
-                    </tr>
-                </table>
-            </div>
-
-            <!-- OCR-Details -->
-            <div class="detail-section">
-                <h3 class="section-title">OCR-Verarbeitung</h3>
-                <table class="detail-table">
-                    <tr>
-                        <th>Parameter</th>
-                        <th>Wert</th>
-                    </tr>
-                    <tr>
-                        <td>OCR-Engine</td>
-                        <td id="ocrEngine">-</td>
-                    </tr>
-                    <tr>
-                        <td>Beste Strategie</td>
-                        <td id="ocrStrategy">-</td>
-                    </tr>
-                    <tr>
-                        <td>Getestete Strategien</td>
-                        <td id="strategiesTested">-</td>
-                    </tr>
-                    <tr>
-                        <td>OCR-Qualität</td>
-                        <td id="ocrQuality">-</td>
-                    </tr>
-                </table>
-            </div>
-
-            <!-- Matching-Details -->
-            <div class="detail-section">
-                <h3 class="section-title">Matching-Details</h3>
-                <table class="detail-table">
-                    <tr>
-                        <th>Parameter</th>
-                        <th>Wert</th>
-                    </tr>
-                    <tr>
-                        <td>Matching-Methode</td>
-                        <td id="matchMethod">-</td>
-                    </tr>
-                    <tr>
-                        <td>Aus Liste matched</td>
-                        <td id="matchedFromList">-</td>
-                    </tr>
-                    <tr>
-                        <td>OCR-Text</td>
-                        <td id="ocrText">-</td>
-                    </tr>
-                    <tr>
-                        <td>Kandidaten gefunden</td>
-                        <td id="totalCandidates">-</td>
-                    </tr>
-                    <tr>
-                        <td>Standorte gefiltert</td>
-                        <td id="filteredCandidates">-</td>
-                    </tr>
-                </table>
-            </div>
-
-            <!-- Word Pool -->
-            <div class="detail-section">
-                <h3 class="section-title">Word Pool</h3>
-                <div id="wordPool" class="word-pool">
-                    <p style="color: #666;">Keine Wörter erkannt</p>
-                </div>
-            </div>
-
-            <!-- OCR-Rohtext -->
-            <div class="detail-section">
-                <h3 class="section-title">OCR-Rohtext</h3>
-                <div class="ocr-text-preview" id="ocrFullText">Kein Text verfügbar</div>
-            </div>
-
-            <!-- Bildvorschau -->
-            <div class="detail-section">
-                <h3 class="section-title">Bildvorschau</h3>
-                <img id="imagePreview" class="image-preview" alt="Hochgeladenes Bild">
-            </div>
+        <div class="image-modal" id="imageModal">
+            <button class="close-btn" onclick="closeImageModal()">Schließen</button>
+            <img id="modalImage" src="" alt="Vergrößertes Bild">
         </div>
     </div>
 
     <script>
+        let selectedImages = [];
+        let convertingCount = 0;
+        let progressInterval = null;
+
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
-        const uploadBtn = document.getElementById('uploadBtn');
-        const clearBtn = document.getElementById('clearBtn');
-        const loading = document.getElementById('loading');
-        const resultsSection = document.getElementById('resultsSection');
-        
-        let selectedFile = null;
+        const cameraInput = document.getElementById('cameraInput');
+        const analyseBtn = document.getElementById('analyseBtn');
+        const cameraBtn = document.getElementById('cameraBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const previewSection = document.getElementById('previewSection');
+        const previewInfo = document.getElementById('previewInfo');
+        const previewGrid = document.getElementById('previewGrid');
 
-        // Upload Area Click
         uploadArea.addEventListener('click', () => {
             fileInput.click();
         });
 
-        // File Input Change
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                selectedFile = e.target.files[0];
-                uploadArea.innerHTML = `<p>Datei ausgewählt: ${selectedFile.name}</p>`;
-                uploadBtn.disabled = false;
-            }
-        });
-
-        // Drag & Drop
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadArea.classList.add('dragover');
@@ -470,168 +553,393 @@
         uploadArea.addEventListener('drop', (e) => {
             e.preventDefault();
             uploadArea.classList.remove('dragover');
-            
-            if (e.dataTransfer.files.length > 0) {
-                selectedFile = e.dataTransfer.files[0];
-                fileInput.files = e.dataTransfer.files;
-                uploadArea.innerHTML = `<p>Datei ausgewählt: ${selectedFile.name}</p>`;
-                uploadBtn.disabled = false;
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        cameraBtn.addEventListener('click', () => {
+            cameraInput.click();
+        });
+
+        cameraInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        resetBtn.addEventListener('click', () => {
+            if (confirm('Alle ausgewählten Bilder löschen?')) {
+                selectedImages = [];
+                convertingCount = 0;
+                updatePreview();
+                document.getElementById('resultsSection').classList.remove('active');
+                fileInput.value = '';
+                cameraInput.value = '';
             }
         });
 
-        uploadBtn.addEventListener('click', async () => {
-            if (!selectedFile) return;
+        analyseBtn.addEventListener('click', processImages);
 
-            loading.classList.add('visible');
-            resultsSection.classList.remove('visible');
-            uploadBtn.disabled = true;
+        function isHeicFile(file) {
+            const name = file.name.toLowerCase();
+            const type = file.type.toLowerCase();
+            return name.endsWith('.heic') || 
+                   name.endsWith('.heif') || 
+                   type === 'image/heic' || 
+                   type === 'image/heif';
+        }
 
+        async function convertHeicImage(base64Data, fileName) {
             try {
-                const base64 = await fileToBase64(selectedFile);
-                const response = await fetch('/ocr/upload-image', {
+                const response = await fetch('/ocr/convert-heic', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        img_body_base64: base64.split(',')[1]
+                        img_body_base64: base64Data
                     })
                 });
 
-                const result = await response.json();
-
-                if (result.success) {
-                    displayResults(result);
-                } else {
-                    alert('Fehler bei der Verarbeitung: ' + (result.detail || 'Unbekannter Fehler'));
+                if (!response.ok) {
+                    throw new Error(`Konvertierung fehlgeschlagen: ${response.status}`);
                 }
 
+                const data = await response.json();
+                return data.converted_base64;
             } catch (error) {
-                alert('Fehler: ' + error.message);
-                console.error(error);
-            } finally {
-                loading.classList.remove('visible');
-                uploadBtn.disabled = false;
+                console.error(`Fehler bei HEIC-Konvertierung von ${fileName}:`, error);
+                alert(`HEIC-Konvertierung fehlgeschlagen für ${fileName}. Verarbeitung wird trotzdem versucht.`);
+                return null;
             }
-        });
+        }
 
-        clearBtn.addEventListener('click', () => {
-            selectedFile = null;
-            fileInput.value = '';
-            uploadArea.innerHTML = '<p>Bild hier ablegen oder klicken zum Auswählen</p><p style="font-size: 0.9rem; color: #666; margin-top: 0.5rem;">Unterstützte Formate: JPG, PNG, HEIC</p>';
-            uploadBtn.disabled = true;
-            resultsSection.classList.remove('visible');
-        });
+        async function handleFiles(files) {
+            const filesArray = Array.from(files);
+            
+            for (const file of filesArray) {
+                const isImage = file.type.startsWith('image/') || 
+                               file.name.match(/\.(jpg|jpeg|png|heic|heif|webp|gif)$/i);
+                
+                if (isImage) {
+                    const reader = new FileReader();
+                    const isHeic = isHeicFile(file);
+                    
+                    reader.onload = async function(e) {
+                        const base64Data = e.target.result.split(',')[1];
+                        const tempIndex = selectedImages.length;
+                        
+                        selectedImages.push({
+                            file: file,
+                            base64: base64Data,
+                            preview: null,
+                            name: file.name,
+                            isHeic: isHeic,
+                            converting: isHeic
+                        });
+                        
+                        updatePreview();
+                        
+                        if (isHeic) {
+                            convertingCount++;
+                            updateConvertingStatus();
+                            
+                            const convertedBase64 = await convertHeicImage(base64Data, file.name);
+                            
+                            if (convertedBase64) {
+                                selectedImages[tempIndex].preview = `data:image/jpeg;base64,${convertedBase64}`;
+                                selectedImages[tempIndex].base64 = convertedBase64;
+                                selectedImages[tempIndex].converting = false;
+                            } else {
+                                selectedImages[tempIndex].converting = false;
+                            }
+                            
+                            convertingCount--;
+                            updateConvertingStatus();
+                            updatePreview();
+                        } else {
+                            selectedImages[tempIndex].preview = e.target.result;
+                            updatePreview();
+                        }
+                    };
+                    
+                    reader.onerror = function(error) {
+                        console.error(`Fehler beim Lesen von ${file.name}:`, error);
+                        alert(`Fehler beim Lesen der Datei: ${file.name}`);
+                    };
+                    
+                    reader.readAsDataURL(file);
+                }
+            }
+        }
 
-        // Hilfsfunktion: File zu Base64
-        function fileToBase64(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(reader.result);
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
+        function updateConvertingStatus() {
+            if (convertingCount > 0) {
+                previewInfo.classList.add('converting');
+            } else {
+                previewInfo.classList.remove('converting');
+            }
+        }
+
+        function updatePreview() {
+            if (selectedImages.length === 0) {
+                previewSection.classList.remove('active');
+                analyseBtn.disabled = true;
+                resetBtn.disabled = true;
+                return;
+            }
+
+            previewSection.classList.add('active');
+            analyseBtn.disabled = convertingCount > 0;
+            resetBtn.disabled = false;
+
+            const count = selectedImages.length;
+            const heicCount = selectedImages.filter(img => img.isHeic).length;
+            
+            let infoText = `${count} Bild${count !== 1 ? 'er' : ''} ausgewählt`;
+            if (convertingCount > 0) {
+                infoText += ` - ${convertingCount} HEIC-Bild${convertingCount !== 1 ? 'er' : ''} wird konvertiert...`;
+            } else if (heicCount > 0) {
+                infoText += ` (${heicCount} HEIC-Bild${heicCount !== 1 ? 'er' : ''} konvertiert)`;
+            }
+            previewInfo.textContent = infoText;
+
+            previewGrid.innerHTML = '';
+            selectedImages.forEach((img, index) => {
+                const div = document.createElement('div');
+                div.className = 'preview-item';
+                
+                if (img.converting) {
+                    div.classList.add('converting');
+                }
+                
+                if (img.preview) {
+                    div.innerHTML = `
+                        <img src="${img.preview}" alt="${img.name}">
+                        <button class="remove-btn" onclick="removeImage(${index})">×</button>
+                        <div class="filename">${img.name}</div>
+                    `;
+                } else {
+                    div.innerHTML = `
+                        <div style="height: 120px; display: flex; align-items: center; justify-content: center; background: #f0f0f0;">
+                            <div style="text-align: center; color: #666;">
+                                <div style="font-size: 2em; margin-bottom: 10px;">⏳</div>
+                                <div style="font-size: 0.85em;">Wird konvertiert...</div>
+                            </div>
+                        </div>
+                        <button class="remove-btn" onclick="removeImage(${index})">×</button>
+                        <div class="filename">${img.name}</div>
+                    `;
+                }
+                
+                previewGrid.appendChild(div);
             });
         }
 
-        // Ergebnisse anzeigen
+        function removeImage(index) {
+            selectedImages.splice(index, 1);
+            updatePreview();
+        }
+
+        async function fetchProgress() {
+            try {
+                const response = await fetch('/ocr/batch-progress');
+                const data = await response.json();
+                
+                if (data.processing) {
+                    const progressFill = document.getElementById('progressFill');
+                    const processingStatus = document.getElementById('processingStatus');
+                    
+                    progressFill.style.width = `${data.percentage}%`;
+                    processingStatus.textContent = `${data.current} von ${data.total} abgeschlossen`;
+                }
+            } catch (error) {
+                console.error('Error fetching progress:', error);
+            }
+        }
+
+        async function processImages() {
+            if (selectedImages.length === 0) return;
+            if (convertingCount > 0) {
+                alert('Bitte warten Sie, bis alle HEIC-Bilder konvertiert wurden.');
+                return;
+            }
+
+            const overlay = document.getElementById('processingOverlay');
+            const progressFill = document.getElementById('progressFill');
+            const processingStatus = document.getElementById('processingStatus');
+            
+            overlay.classList.add('active');
+            progressFill.style.width = '0%';
+            processingStatus.textContent = `0 von ${selectedImages.length} abgeschlossen`;
+
+            // Start polling for progress
+            progressInterval = setInterval(fetchProgress, 500);
+
+            const payload = selectedImages.map(img => ({
+                img_body_base64: img.base64
+            }));
+
+            try {
+                const response = await fetch('/ocr/upload-images-batch', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // Stop polling
+                clearInterval(progressInterval);
+                progressInterval = null;
+                
+                // Set to 100%
+                progressFill.style.width = '100%';
+                processingStatus.textContent = `${data.images_processed} von ${data.images_processed} abgeschlossen`;
+                
+                displayResults(data);
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Fehler bei der Verarbeitung: ' + error.message);
+            } finally {
+                if (progressInterval) {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                }
+                overlay.classList.remove('active');
+            }
+        }
+
+        function openImageModal(imageSrc) {
+            const modal = document.getElementById('imageModal');
+            const modalImage = document.getElementById('modalImage');
+            modalImage.src = imageSrc;
+            modal.classList.add('active');
+        }
+
+        function closeImageModal() {
+            const modal = document.getElementById('imageModal');
+            modal.classList.remove('active');
+        }
+
+        // Close modal on click outside image
+        document.getElementById('imageModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeImageModal();
+            }
+        });
+
+        // Close modal on ESC key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeImageModal();
+            }
+        });
+
         function displayResults(data) {
-            const details = data.recipient_details || {};
-            
-            document.getElementById('recipientName').textContent = data.recipient || 'Unbekannt';
-            
-            const matchStatus = document.getElementById('matchStatus');
-            if (details.matched_from_list) {
-                matchStatus.textContent = 'Aus Liste matched';
-                matchStatus.className = 'status-indicator status-success';
-            } else {
-                matchStatus.textContent = 'Nicht matched';
-                matchStatus.className = 'status-indicator status-error';
-            }
+            const resultsSection = document.getElementById('resultsSection');
+            const statsBar = document.getElementById('statsBar');
+            const resultsContainer = document.getElementById('resultsContainer');
 
-            document.getElementById('confidence').textContent = (details.confidence || 0) + '%';
-            document.getElementById('confidenceInfo').textContent = 
-                details.method || 'Keine Methode';
+            statsBar.innerHTML = `
+                <div class="stat-item">
+                    <div class="stat-value">${data.images_processed}</div>
+                    <div class="stat-label">Bilder verarbeitet</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${data.successful_matches}</div>
+                    <div class="stat-label">Erfolgreiche Matches</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${data.failed_matches}</div>
+                    <div class="stat-label">Fehlgeschlagen</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value">${data.total_processing_time_seconds}s</div>
+                    <div class="stat-label">Verarbeitungszeit</div>
+                </div>
+            `;
 
-            document.getElementById('processingTime').textContent = 
-                (data.processing_time_seconds || 0).toFixed(2);
+            resultsContainer.innerHTML = '';
 
-            // Bildqualität
-            const quality = data.quality_info || {};
-            document.getElementById('imageQuality').textContent = 
-                (quality.quality_score || 0) + '/100';
-            document.getElementById('qualityIssues').textContent = 
-                (quality.issues && quality.issues.length > 0) 
-                    ? quality.issues.join(', ') 
-                    : 'Keine Probleme';
+            data.results.forEach((result, index) => {
+                const card = document.createElement('div');
+                card.className = 'result-card';
 
-            // Bildparameter
-            document.getElementById('imageSize').textContent = 
-                formatBytes(data.image_size_bytes || 0);
-            document.getElementById('imageFormat').textContent = 
-                data.image_format || 'Unbekannt';
-            document.getElementById('brightness').textContent = 
-                (quality.brightness || 0).toFixed(2);
-            document.getElementById('contrast').textContent = 
-                (quality.contrast || 0).toFixed(2);
-            document.getElementById('sharpness').textContent = 
-                (quality.sharpness || 0).toFixed(2);
-            document.getElementById('qualityScore').textContent = 
-                (quality.quality_score || 0) + '/100';
+                let statusBadge = '';
+                if (result.success) {
+                    if (result.matched_from_list) {
+                        statusBadge = '<span class="badge badge-success">Empfänger gefunden</span>';
+                    } else {
+                        statusBadge = '<span class="badge badge-warning">Kein Match</span>';
+                    }
+                } else {
+                    statusBadge = '<span class="badge badge-error">Fehler</span>';
+                }
 
-            // OCR-Details
-            document.getElementById('ocrEngine').textContent = 
-                data.best_ocr_engine || 'Unbekannt';
-            document.getElementById('ocrStrategy').textContent = 
-                data.best_ocr_strategy || 'Unbekannt';
-            document.getElementById('strategiesTested').textContent = 
-                data.ocr_strategies_tested || 0;
-            document.getElementById('ocrQuality').textContent = 
-                (details.ocr_quality || 0) + ' Buchstaben erkannt';
+                const warningMessage = result.warning 
+                    ? `<div class="warning-box">
+                        ${result.warning}
+                       </div>`
+                    : '';
 
-            // Matching-Details
-            document.getElementById('matchMethod').textContent = 
-                details.method || 'Unbekannt';
-            document.getElementById('matchedFromList').textContent = 
-                details.matched_from_list ? 'Ja' : 'Nein';
-            document.getElementById('ocrText').textContent = 
-                details.ocr_text || 'Kein Text';
-            document.getElementById('totalCandidates').textContent = 
-                details.total_candidates_found || 0;
-            document.getElementById('filteredCandidates').textContent = 
-                details.filtered_candidates || 0;
+                const imageSrc = `data:image/jpeg;base64,${result.image_base64}`;
 
-            // Word Pool
-            const wordPool = details.word_pool || [];
-            const wordPoolDiv = document.getElementById('wordPool');
-            if (wordPool.length > 0) {
-                wordPoolDiv.innerHTML = wordPool
-                    .map(word => `<span class="word-tag">${word}</span>`)
-                    .join('');
-            } else {
-                wordPoolDiv.innerHTML = '<p style="color: #666;">Keine Wörter erkannt</p>';
-            }
+                card.innerHTML = `
+                    <img src="${imageSrc}" 
+                         alt="Bild ${index + 1}" 
+                         class="result-image"
+                         onclick="openImageModal('${imageSrc}')">
+                    <div class="result-info">
+                        <h3>Bild ${index + 1} ${statusBadge}</h3>
+                        
+                        ${result.success ? `
+                            <div class="info-row">
+                                <span class="label">Empfänger:</span>
+                                <span class="value"><strong>${result.recipient}</strong></span>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">Konfidenz:</span>
+                                <span class="value">${result.confidence}%</span>
+                            </div>
+                            <div class="confidence-bar">
+                                <div class="confidence-fill" style="width: ${result.confidence}%"></div>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">Methode:</span>
+                                <span class="value">${result.method}</span>
+                            </div>
+                            <div class="info-row">
+                                <span class="label">Bildqualität:</span>
+                                <span class="value">${result.quality_score}/100</span>
+                            </div>
+                            ${warningMessage}
+                        ` : `
+                            <div class="info-row">
+                                <span class="label">Fehler:</span>
+                                <span class="value" style="color: #f44336;">${result.error}</span>
+                            </div>
+                        `}
+                    </div>
+                `;
 
-            // OCR-Rohtext
-            document.getElementById('ocrFullText').textContent = 
-                data.ocr_text || 'Kein Text verfügbar';
+                resultsContainer.appendChild(card);
+            });
 
-            // Bildvorschau
-            const imagePreview = document.getElementById('imagePreview');
-            imagePreview.src = 'data:image/jpeg;base64,' + data.image_base64;
-
-            // Results anzeigen
-            resultsSection.classList.add('visible');
+            resultsSection.classList.add('active');
             resultsSection.scrollIntoView({ behavior: 'smooth' });
         }
 
-        // Hilfsfunktion: Bytes formatieren
-        function formatBytes(bytes) {
-            if (bytes === 0) return '0 Bytes';
-            const k = 1024;
-            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-            const i = Math.floor(Math.log(bytes) / Math.log(k));
-            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
-        }
+        window.removeImage = removeImage;
+        window.openImageModal = openImageModal;
+        window.closeImageModal = closeImageModal;
     </script>
 </body>
 </html>
