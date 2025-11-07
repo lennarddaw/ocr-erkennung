@@ -200,18 +200,6 @@
             background: white;
         }
 
-        .preview-item .converting-badge {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 4px;
-            font-size: 0.85em;
-        }
-
         .processing-overlay {
             position: fixed;
             top: 0;
@@ -256,6 +244,22 @@
             color: #666;
             font-size: 0.95em;
             margin-top: 10px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 20px 0 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #666;
+            transition: width 0.3s ease;
+            width: 0%;
         }
 
         .results-section {
@@ -311,6 +315,12 @@
             object-fit: cover;
             border-radius: 4px;
             border: 1px solid #e0e0e0;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+
+        .result-image:hover {
+            opacity: 0.8;
         }
 
         .result-info h3 {
@@ -378,21 +388,63 @@
             transition: width 0.5s ease;
         }
 
-        .word-pool {
-            background: #f8f8f8;
-            padding: 10px;
+        .warning-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
             border-radius: 4px;
-            margin-top: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            color: #856404;
         }
 
-        .word-pool-item {
-            display: inline-block;
-            background: #e0e0e0;
+        .warning-box strong {
+            display: block;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+            color: #ff9800;
+        }
+
+        .image-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .image-modal.active {
+            display: flex;
+        }
+
+        .image-modal img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            border-radius: 4px;
+        }
+
+        .image-modal .close-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: white;
             color: #333;
-            padding: 3px 8px;
-            border-radius: 3px;
-            margin: 2px;
-            font-size: 0.85em;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 20px;
+            font-size: 1em;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .image-modal .close-btn:hover {
+            background: #f0f0f0;
         }
 
         #fileInput, #cameraInput {
@@ -452,6 +504,9 @@
             <div class="processing-content">
                 <div class="spinner"></div>
                 <h3>Bilder werden verarbeitet...</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
                 <p class="processing-status" id="processingStatus">0 von 0 abgeschlossen</p>
             </div>
         </div>
@@ -460,13 +515,18 @@
             <div class="stats-bar" id="statsBar"></div>
             <div id="resultsContainer"></div>
         </div>
+
+        <div class="image-modal" id="imageModal">
+            <button class="close-btn" onclick="closeImageModal()">Schließen</button>
+            <img id="modalImage" src="" alt="Vergrößertes Bild">
+        </div>
     </div>
 
     <script>
         let selectedImages = [];
         let convertingCount = 0;
+        let progressInterval = null;
 
-        // Upload Area Setup
         const uploadArea = document.getElementById('uploadArea');
         const fileInput = document.getElementById('fileInput');
         const cameraInput = document.getElementById('cameraInput');
@@ -477,12 +537,10 @@
         const previewInfo = document.getElementById('previewInfo');
         const previewGrid = document.getElementById('previewGrid');
 
-        // Click to upload
         uploadArea.addEventListener('click', () => {
             fileInput.click();
         });
 
-        // Drag and drop
         uploadArea.addEventListener('dragover', (e) => {
             e.preventDefault();
             uploadArea.classList.add('dragover');
@@ -498,12 +556,10 @@
             handleFiles(e.dataTransfer.files);
         });
 
-        // File input change
         fileInput.addEventListener('change', (e) => {
             handleFiles(e.target.files);
         });
 
-        // Camera button
         cameraBtn.addEventListener('click', () => {
             cameraInput.click();
         });
@@ -512,7 +568,6 @@
             handleFiles(e.target.files);
         });
 
-        // Reset button
         resetBtn.addEventListener('click', () => {
             if (confirm('Alle ausgewählten Bilder löschen?')) {
                 selectedImages = [];
@@ -524,7 +579,6 @@
             }
         });
 
-        // Analyse button
         analyseBtn.addEventListener('click', processImages);
 
         function isHeicFile(file) {
@@ -576,7 +630,6 @@
                         const base64Data = e.target.result.split(',')[1];
                         const tempIndex = selectedImages.length;
                         
-                        // Füge Bild erstmal ohne Vorschau hinzu
                         selectedImages.push({
                             file: file,
                             base64: base64Data,
@@ -588,7 +641,6 @@
                         
                         updatePreview();
                         
-                        // Wenn HEIC, konvertiere es
                         if (isHeic) {
                             convertingCount++;
                             updateConvertingStatus();
@@ -596,12 +648,10 @@
                             const convertedBase64 = await convertHeicImage(base64Data, file.name);
                             
                             if (convertedBase64) {
-                                // Update das Bild mit der konvertierten Version
                                 selectedImages[tempIndex].preview = `data:image/jpeg;base64,${convertedBase64}`;
                                 selectedImages[tempIndex].base64 = convertedBase64;
                                 selectedImages[tempIndex].converting = false;
                             } else {
-                                // Konvertierung fehlgeschlagen, aber behalte Original
                                 selectedImages[tempIndex].converting = false;
                             }
                             
@@ -609,7 +659,6 @@
                             updateConvertingStatus();
                             updatePreview();
                         } else {
-                            // Normale Bilder direkt anzeigen
                             selectedImages[tempIndex].preview = e.target.result;
                             updatePreview();
                         }
@@ -666,15 +715,12 @@
                 }
                 
                 if (img.preview) {
-                    // Bild-Vorschau verfügbar
                     div.innerHTML = `
                         <img src="${img.preview}" alt="${img.name}">
                         <button class="remove-btn" onclick="removeImage(${index})">×</button>
-                        ${img.converting ? '<div class="converting-badge">Konvertiert...</div>' : ''}
                         <div class="filename">${img.name}</div>
                     `;
                 } else {
-                    // Noch keine Vorschau (z.B. HEIC wird gerade konvertiert)
                     div.innerHTML = `
                         <div style="height: 120px; display: flex; align-items: center; justify-content: center; background: #f0f0f0;">
                             <div style="text-align: center; color: #666;">
@@ -696,6 +742,23 @@
             updatePreview();
         }
 
+        async function fetchProgress() {
+            try {
+                const response = await fetch('/ocr/batch-progress');
+                const data = await response.json();
+                
+                if (data.processing) {
+                    const progressFill = document.getElementById('progressFill');
+                    const processingStatus = document.getElementById('processingStatus');
+                    
+                    progressFill.style.width = `${data.percentage}%`;
+                    processingStatus.textContent = `${data.current} von ${data.total} abgeschlossen`;
+                }
+            } catch (error) {
+                console.error('Error fetching progress:', error);
+            }
+        }
+
         async function processImages() {
             if (selectedImages.length === 0) return;
             if (convertingCount > 0) {
@@ -704,10 +767,15 @@
             }
 
             const overlay = document.getElementById('processingOverlay');
+            const progressFill = document.getElementById('progressFill');
             const processingStatus = document.getElementById('processingStatus');
             
             overlay.classList.add('active');
+            progressFill.style.width = '0%';
             processingStatus.textContent = `0 von ${selectedImages.length} abgeschlossen`;
+
+            // Start polling for progress
+            progressInterval = setInterval(fetchProgress, 500);
 
             const payload = selectedImages.map(img => ({
                 img_body_base64: img.base64
@@ -727,21 +795,59 @@
                 }
 
                 const data = await response.json();
+                
+                // Stop polling
+                clearInterval(progressInterval);
+                progressInterval = null;
+                
+                // Set to 100%
+                progressFill.style.width = '100%';
+                processingStatus.textContent = `${data.images_processed} von ${data.images_processed} abgeschlossen`;
+                
                 displayResults(data);
             } catch (error) {
                 console.error('Error:', error);
                 alert('Fehler bei der Verarbeitung: ' + error.message);
             } finally {
+                if (progressInterval) {
+                    clearInterval(progressInterval);
+                    progressInterval = null;
+                }
                 overlay.classList.remove('active');
             }
         }
+
+        function openImageModal(imageSrc) {
+            const modal = document.getElementById('imageModal');
+            const modalImage = document.getElementById('modalImage');
+            modalImage.src = imageSrc;
+            modal.classList.add('active');
+        }
+
+        function closeImageModal() {
+            const modal = document.getElementById('imageModal');
+            modal.classList.remove('active');
+        }
+
+        // Close modal on click outside image
+        document.getElementById('imageModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeImageModal();
+            }
+        });
+
+        // Close modal on ESC key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeImageModal();
+            }
+        });
 
         function displayResults(data) {
             const resultsSection = document.getElementById('resultsSection');
             const statsBar = document.getElementById('statsBar');
             const resultsContainer = document.getElementById('resultsContainer');
 
-            // Stats
             statsBar.innerHTML = `
                 <div class="stat-item">
                     <div class="stat-value">${data.images_processed}</div>
@@ -778,19 +884,19 @@
                     statusBadge = '<span class="badge badge-error">Fehler</span>';
                 }
 
-                const wordPool = result.word_pool && result.word_pool.length > 0 
-                    ? `<div class="word-pool">
-                        <strong>Erkannte Wörter:</strong><br>
-                        ${result.word_pool.map(word => `<span class="word-pool-item">${word}</span>`).join('')}
+                const warningMessage = result.warning 
+                    ? `<div class="warning-box">
+                        ${result.warning}
                        </div>`
                     : '';
 
-                const warningMessage = result.warning 
-                    ? `<div class="info-row"><span class="label">Hinweis:</span><span class="value">${result.warning}</span></div>`
-                    : '';
+                const imageSrc = `data:image/jpeg;base64,${result.image_base64}`;
 
                 card.innerHTML = `
-                    <img src="data:image/jpeg;base64,${result.image_base64}" alt="Bild ${index + 1}" class="result-image">
+                    <img src="${imageSrc}" 
+                         alt="Bild ${index + 1}" 
+                         class="result-image"
+                         onclick="openImageModal('${imageSrc}')">
                     <div class="result-info">
                         <h3>Bild ${index + 1} ${statusBadge}</h3>
                         
@@ -815,7 +921,6 @@
                                 <span class="value">${result.quality_score}/100</span>
                             </div>
                             ${warningMessage}
-                            ${wordPool}
                         ` : `
                             <div class="info-row">
                                 <span class="label">Fehler:</span>
@@ -833,6 +938,8 @@
         }
 
         window.removeImage = removeImage;
+        window.openImageModal = openImageModal;
+        window.closeImageModal = closeImageModal;
     </script>
 </body>
 </html>

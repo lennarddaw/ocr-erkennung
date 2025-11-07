@@ -56,6 +56,14 @@ LOCATION_FUZZY_THRESHOLD = LOCATION_SETTINGS.get("location_fuzzy_threshold", 85)
 FILTER_ENABLED = LOCATION_SETTINGS.get("filter_enabled", True)
 CASE_SENSITIVE = LOCATION_SETTINGS.get("case_sensitive", False)
 
+# Global variable for batch progress tracking
+BATCH_PROGRESS = {
+    "processing": False,
+    "current": 0,
+    "total": 0,
+    "percentage": 0
+}
+
 
 def extract_recipient_from_ocr(text: str) -> Dict:
     word_pool = extract_capitalized_words(
@@ -230,17 +238,36 @@ async def health_check():
         "filter_enabled": FILTER_ENABLED,
         "fuzzy_threshold": FUZZY_THRESHOLD,
         "cache_size": len(RECIPIENT_CACHE),
-        "version": "4.0.0-modular"
+        "version": "4.1.0-batch-progress"
     }
+
+
+@router.get("/batch-progress")
+async def get_batch_progress():
+    """
+    Gibt den aktuellen Fortschritt der Batch-Verarbeitung zurück
+    """
+    return {
+        "processing": BATCH_PROGRESS["processing"],
+        "current": BATCH_PROGRESS["current"],
+        "total": BATCH_PROGRESS["total"],
+        "percentage": BATCH_PROGRESS["percentage"]
+    }
+
 
 @router.post("/convert-heic")
 async def convert_heic(image_data: ImageBase64):
+    """
+    Konvertiert ein HEIC-Bild zu JPG für die Browser-Vorschau
+    """
     try:
         img_bytes = base64.b64decode(image_data.img_body_base64)
         pil_image = Image.open(BytesIO(img_bytes))
         
+        # HEIC zu RGB konvertieren
         pil_image = convert_heic_to_rgb(pil_image)
         
+        # Als JPG zurückgeben
         buffer = BytesIO()
         pil_image.save(buffer, format='JPEG', quality=90)
         buffer.seek(0)
@@ -263,6 +290,11 @@ async def convert_heic(image_data: ImageBase64):
 
 @router.post("/upload-images-batch")
 async def upload_images_batch(images_data: List[ImageBase64]):
+    """
+    Verarbeitet mehrere Bilder gleichzeitig mit Progress-Tracking
+    """
+    global BATCH_PROGRESS
+    
     results = []
     start_time = time.time()
     
@@ -270,8 +302,15 @@ async def upload_images_batch(images_data: List[ImageBase64]):
         if not KNOWN_RECIPIENTS:
             raise HTTPException(status_code=500, detail="No recipient list loaded")
         
+        # Initialize progress
+        BATCH_PROGRESS["processing"] = True
+        BATCH_PROGRESS["current"] = 0
+        BATCH_PROGRESS["total"] = len(images_data)
+        BATCH_PROGRESS["percentage"] = 0
+        
         for idx, image_data in enumerate(images_data):
             try:
+                # Verarbeite jedes Bild einzeln
                 img_bytes = base64.b64decode(image_data.img_body_base64)
                 pil_image = Image.open(BytesIO(img_bytes))
                 pil_image = convert_heic_to_rgb(pil_image)
@@ -308,6 +347,10 @@ async def upload_images_batch(images_data: List[ImageBase64]):
                     "warning": recipient_result.get("warning", None)
                 })
                 
+                # Update progress
+                BATCH_PROGRESS["current"] = idx + 1
+                BATCH_PROGRESS["percentage"] = int((idx + 1) / len(images_data) * 100)
+                
             except Exception as e:
                 results.append({
                     "image_index": idx,
@@ -316,9 +359,19 @@ async def upload_images_batch(images_data: List[ImageBase64]):
                     "image_base64": image_data.img_body_base64
                 })
                 print(f"Error processing image {idx+1}: {e}")
+                
+                # Update progress even on error
+                BATCH_PROGRESS["current"] = idx + 1
+                BATCH_PROGRESS["percentage"] = int((idx + 1) / len(images_data) * 100)
         
         total_time = round(time.time() - start_time, 2)
         successful = sum(1 for r in results if r.get("success", False))
+        
+        # Reset progress
+        BATCH_PROGRESS["processing"] = False
+        BATCH_PROGRESS["current"] = 0
+        BATCH_PROGRESS["total"] = 0
+        BATCH_PROGRESS["percentage"] = 0
         
         return {
             "success": True,
@@ -331,11 +384,13 @@ async def upload_images_batch(images_data: List[ImageBase64]):
         }
         
     except HTTPException:
+        BATCH_PROGRESS["processing"] = False
         raise
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
         print(f"Batch processing error: {error_trace}")
+        BATCH_PROGRESS["processing"] = False
         raise HTTPException(status_code=500, detail={"error": str(e), "type": type(e).__name__})
 
 
@@ -366,6 +421,7 @@ async def get_statistics():
             "name_parts_cache": True,
             "adaptive_preprocessing": True,
             "smart_combinations": True,
-            "modular_architecture": True
+            "modular_architecture": True,
+            "batch_progress_tracking": True
         }
     }
