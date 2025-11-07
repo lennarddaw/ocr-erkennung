@@ -61,8 +61,7 @@ BATCH_PROGRESS = {
     "processing": False,
     "current": 0,
     "total": 0,
-    "percentage": 0,
-    "items": []
+    "percentage": 0
 }
 
 
@@ -252,8 +251,7 @@ async def get_batch_progress():
         "processing": BATCH_PROGRESS["processing"],
         "current": BATCH_PROGRESS["current"],
         "total": BATCH_PROGRESS["total"],
-        "percentage": BATCH_PROGRESS["percentage"],
-        "items": BATCH_PROGRESS["items"]
+        "percentage": BATCH_PROGRESS["percentage"]
     }
 
 
@@ -309,23 +307,9 @@ async def upload_images_batch(images_data: List[ImageBase64]):
         BATCH_PROGRESS["current"] = 0
         BATCH_PROGRESS["total"] = len(images_data)
         BATCH_PROGRESS["percentage"] = 0
-        BATCH_PROGRESS["items"] = [
-            {
-                "index": idx,
-                "status": "pending",
-                "message": "Wartet auf Verarbeitung",
-                "filename": image_data.filename or f"Bild {idx + 1}"
-            }
-            for idx, image_data in enumerate(images_data)
-        ]
-
+        
         for idx, image_data in enumerate(images_data):
             try:
-                BATCH_PROGRESS["items"][idx].update({
-                    "status": "processing",
-                    "message": "Verarbeitung läuft"
-                })
-
                 # Verarbeite jedes Bild einzeln
                 img_bytes = base64.b64decode(image_data.img_body_base64)
                 pil_image = Image.open(BytesIO(img_bytes))
@@ -349,12 +333,9 @@ async def upload_images_batch(images_data: List[ImageBase64]):
                 ocr_results = run_hybrid_ocr_parallel(numpy_image, quality_info['preprocessing_mode'], preprocess_funcs)
                 recipient_result = extract_best_recipient(ocr_results)
                 
-                filename = image_data.filename or f"Bild {idx + 1}"
-
                 results.append({
                     "image_index": idx,
                     "success": True,
-                    "filename": filename,
                     "recipient": recipient_result["name"],
                     "confidence": recipient_result.get("confidence", 0),
                     "matched_from_list": recipient_result.get("matched_from_list", False),
@@ -365,43 +346,32 @@ async def upload_images_batch(images_data: List[ImageBase64]):
                     "image_base64": image_data.img_body_base64,
                     "warning": recipient_result.get("warning", None)
                 })
-
+                
                 # Update progress
                 BATCH_PROGRESS["current"] = idx + 1
                 BATCH_PROGRESS["percentage"] = int((idx + 1) / len(images_data) * 100)
-                BATCH_PROGRESS["items"][idx].update({
-                    "status": "done",
-                    "message": f"Fertig (Konfidenz: {recipient_result.get('confidence', 0)}%)"
-                })
-
+                
             except Exception as e:
-                filename = image_data.filename or f"Bild {idx + 1}"
                 results.append({
                     "image_index": idx,
                     "success": False,
-                    "filename": filename,
                     "error": str(e),
                     "image_base64": image_data.img_body_base64
                 })
                 print(f"Error processing image {idx+1}: {e}")
-
+                
                 # Update progress even on error
                 BATCH_PROGRESS["current"] = idx + 1
                 BATCH_PROGRESS["percentage"] = int((idx + 1) / len(images_data) * 100)
-                BATCH_PROGRESS["items"][idx].update({
-                    "status": "error",
-                    "message": str(e)
-                })
-
+        
         total_time = round(time.time() - start_time, 2)
         successful = sum(1 for r in results if r.get("success", False))
-
+        
         # Reset progress
         BATCH_PROGRESS["processing"] = False
         BATCH_PROGRESS["current"] = 0
         BATCH_PROGRESS["total"] = 0
         BATCH_PROGRESS["percentage"] = 0
-        BATCH_PROGRESS["items"] = []
         
         return {
             "success": True,
@@ -415,14 +385,12 @@ async def upload_images_batch(images_data: List[ImageBase64]):
         
     except HTTPException:
         BATCH_PROGRESS["processing"] = False
-        BATCH_PROGRESS["items"] = []
         raise
     except Exception as e:
         import traceback
         error_trace = traceback.format_exc()
         print(f"Batch processing error: {error_trace}")
         BATCH_PROGRESS["processing"] = False
-        BATCH_PROGRESS["items"] = []
         raise HTTPException(status_code=500, detail={"error": str(e), "type": type(e).__name__})
 
 
