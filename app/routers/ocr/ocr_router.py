@@ -56,7 +56,6 @@ LOCATION_FUZZY_THRESHOLD = LOCATION_SETTINGS.get("location_fuzzy_threshold", 85)
 FILTER_ENABLED = LOCATION_SETTINGS.get("filter_enabled", True)
 CASE_SENSITIVE = LOCATION_SETTINGS.get("case_sensitive", False)
 
-# Global variable for batch progress tracking
 BATCH_PROGRESS = {
     "processing": False,
     "current": 0,
@@ -257,17 +256,12 @@ async def get_batch_progress():
 
 @router.post("/convert-heic")
 async def convert_heic(image_data: ImageBase64):
-    """
-    Konvertiert ein HEIC-Bild zu JPG für die Browser-Vorschau
-    """
     try:
         img_bytes = base64.b64decode(image_data.img_body_base64)
         pil_image = Image.open(BytesIO(img_bytes))
         
-        # HEIC zu RGB konvertieren
         pil_image = convert_heic_to_rgb(pil_image)
         
-        # Als JPG zurückgeben
         buffer = BytesIO()
         pil_image.save(buffer, format='JPEG', quality=90)
         buffer.seek(0)

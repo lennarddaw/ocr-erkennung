@@ -20,9 +20,6 @@ app.include_router(metrics.router)
 
 @app.get("/")
 async def root():
-    """
-    Serviert die index.html Seite
-    """
     return FileResponse("static/index.html")
 
 @app.get("/health")
